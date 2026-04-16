@@ -135,6 +135,7 @@
           <select id="carType" class="w-full p-3 border font-bold rounded-sm bg-white text-base">
             <option value="小車">小車</option>
             <option value="大車">大車</option>
+            <option value="豪華車">豪華車</option>
           </select>
           <p id="carType-msg" class="text-[11px] font-bold text-red-600 hidden-block"></p>
           
@@ -332,34 +333,87 @@
       calculatePrice();
     }
 
+    // 智慧型搜尋報價，支援陣列與物件格式及各種名稱差異
     function findPriceData(airport, locString) {
-      if (!locString || Object.keys(state.priceMap).length === 0) return null;
+      if (!locString || !state.priceMap) return null;
       const aptPrefix = airport.replace('機場','');
-      const userNorm = locString.replace(/\s+/g,'').replace('台灣','');
-      const zipMatch = userNorm.match(/^(\d{3})/);
-      const userZip = zipMatch ? zipMatch[1] : '';
-      const areaMatch = userNorm.match(/[\u4e00-\u9fa5]{2,}(區|鄉|鎮|市)$/);
-      const userArea = areaMatch ? areaMatch[0] : '';
+      const cleanUser = locString.replace(/\s+/g,'').replace('台灣','');
 
-      const available = Object.keys(state.priceMap).filter(k => {
-        const apt = k.split('_')[0];
-        return apt.includes(aptPrefix) || aptPrefix.includes(apt);
-      }).map(k => ({
-        key: k,
-        norm: k.split('_')[1].replace(/\s+/g,'').replace('台灣',''),
-        zip: k.split('_')[1].match(/\d{3}/)?.[0] || '',
-        text: k.split('_')[1].replace(/\d+/g,'').replace('台灣','')
-      }));
+      // 提取使用者輸入的郵遞區號
+      const zipMatch = cleanUser.match(/\d{3}/);
+      const userZip = zipMatch ? zipMatch[0] : '';
 
-      let m = available.find(x => x.norm === userNorm);
-      if (m) return state.priceMap[m.key];
-      if (userZip) {
-        m = available.find(x => x.zip === userZip);
-        if (m) return state.priceMap[m.key];
+      // 提取使用者輸入的行政區 (例如: 香山區)
+      const areaMatches = cleanUser.match(/[\u4e00-\u9fa5]{1,3}(區|鄉|鎮|市(?!區|鄉|鎮))/g);
+      const userArea = areaMatches ? areaMatches[areaMatches.length - 1] : '';
+
+      const isArray = Array.isArray(state.priceMap);
+      
+      // 將資料標準化為陣列
+      let items = [];
+      if (isArray) {
+        items = state.priceMap;
+      } else {
+        Object.keys(state.priceMap).forEach(k => {
+          const parts = k.split('_');
+          items.push({
+            _originalKey: k,
+            airport: parts[0] || '',
+            loc: parts[1] || k,
+            ...state.priceMap[k]
+          });
+        });
       }
-      if (userArea) {
-        m = available.find(x => x.text.includes(userArea) || userArea.includes(x.text));
-        if (m) return state.priceMap[m.key];
+
+      // 過濾出符合機場的項目 (支援 a機場 等表頭)
+      const available = items.filter(item => {
+        const apt = item.airport || item.a || item['機場'] || item['a機場'] || '';
+        return apt.includes(aptPrefix) || aptPrefix.includes(apt);
+      });
+
+      let bestMatch = null;
+
+      for (const item of available) {
+        // 自動對應您的表單欄位名稱 (包含 c地區、b郵遞區號 等)
+        let locStr = String(item.loc || item.district || item.c || item['地區'] || item['c地區'] || '');
+        let zipStr = String(item.zip || item.b || item['郵遞區號'] || item['b郵遞區號'] || '');
+
+        const fullItemStr = `${zipStr}${locStr}`.replace(/\s+/g, '').replace('台灣','');
+
+        // 提取資料庫中的郵遞區號
+        const itemZipMatch = fullItemStr.match(/\d{3}/);
+        const itemZip = itemZipMatch ? itemZipMatch[0] : '';
+
+        // 提取資料庫中的行政區
+        const itemAreaMatches = fullItemStr.match(/[\u4e00-\u9fa5]{1,3}(區|鄉|鎮|市(?!區|鄉|鎮))/g);
+        const itemArea = itemAreaMatches ? itemAreaMatches[itemAreaMatches.length - 1] : '';
+
+        // 1. 完全比對字串
+        if (fullItemStr === cleanUser || locStr.replace(/\s+/g, '') === cleanUser) {
+            return isArray ? item : state.priceMap[item._originalKey];
+        }
+
+        // 2. 智慧比對: 郵遞區號 + 行政區 完全吻合 (例如: 300 + 香山區)
+        if (userArea && itemArea && userArea === itemArea) {
+            if (userZip && itemZip && userZip === itemZip) {
+                return isArray ? item : state.priceMap[item._originalKey];
+            }
+            if (!bestMatch) bestMatch = item;
+        }
+
+        // 3. 只有郵遞區號吻合 (保底)
+        if (userZip && itemZip && userZip === itemZip && !bestMatch) {
+            bestMatch = item;
+        }
+
+        // 4. 字串互相包含 (最後保底)
+        if (userArea && fullItemStr.includes(userArea) && !bestMatch) {
+            bestMatch = item;
+        }
+      }
+
+      if (bestMatch) {
+          return isArray ? bestMatch : state.priceMap[bestMatch._originalKey];
       }
       return null;
     }
@@ -395,7 +449,21 @@
     function calculatePrice() {
       const mainData = findPriceData(state.airport, state.district);
       const extraData = state.hasExtraPoint ? findPriceData(state.airport, state.extraDistrict) : null;
-      const extract = (d) => (state.carType==='大車'?(d?.large||0):(d?.small||0));
+      
+      // 支援不同格式的費用提取 (包含 d小車, e大車, f豪華車)
+      const extract = (d) => {
+        if (!d) return 0;
+        let val = 0;
+        if (state.carType === '大車') {
+          val = d.large || d.e || d['大車'] || d['e大車'] || 0;
+        } else if (state.carType === '豪華車') {
+          val = d.luxury || d.f || d['豪華車'] || d['f豪華車'] || 0;
+        } else {
+          val = d.small || d.d || d['小車'] || d['d小車'] || 0;
+        }
+        // 防呆，處理報價帶有逗號的情況 (如 1,500)
+        return parseInt(String(val).replace(/,/g, ''), 10) || 0;
+      };
       
       // 基本車資邏輯保持不變：以較遠/貴的區域為基礎
       const p1 = extract(mainData), p2 = extract(extraData);
