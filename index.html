@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>安星租車預約/詢價 表單</title>
+  <title>安星租車預約/詢價 系統</title>
   
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
@@ -231,7 +231,7 @@
   </div>
 
   <script>
-    const GAS_WEBAPP_URL = 'https://script.google.com/macros/s/AKfycbyzurgMkfYRZK4Gf2pxCQxTyhFKTVdmr0u-xoOf3FdYheZ6XAbvJmGERURHdRwfuzvS/exec';
+    const GAS_WEBAPP_URL = 'https://script.google.com/macros/s/AKfycbx1QdQ8fdusfbZ7Ljd0kc-5FhYGu5a1sRP7-KfFbmO9USU-AYPXTB9s9VAh0Eh8cgb_/exec';
     const GOOGLE_MAPS_API_KEY = 'AIzaSyAxYym5ZR8puPb0iiycHdwzTJTKH0Aears';
     const LINE_LIFF_ID = '2009792282-1qTp0cNm';
 
@@ -366,52 +366,43 @@
       let bestMatch = null;
 
       for (const item of items) {
-        // 搜尋此筆資料對應的機場
+        // 機場欄位偵測 (a, 機場, a機場...)
         let rowAirport = String(item.airport || item.a || item['機場'] || item['a機場'] || item._airportMatch || '');
         if (!rowAirport.includes(aptPrefix) && !aptPrefix.includes(rowAirport)) continue;
 
-        // 搜尋此筆資料對應的地區與郵遞區號
+        // 地區與郵遞區號欄位偵測 (c, 地區, c地區, b, 郵遞區號...)
         let locStr = String(item.loc || item.district || item.c || item['地區'] || item['c地區'] || item._locMatch || '');
         let zipStr = String(item.zip || item.b || item['郵遞區號'] || item['b郵遞區號'] || '');
 
         const fullItemStr = `${zipStr}${locStr}`.replace(/\s+/g, '').replace('台灣','');
-
         const itemZipMatch = fullItemStr.match(/\d{3}/);
         const itemZip = itemZipMatch ? itemZipMatch[0] : '';
-
         const itemAreaMatches = fullItemStr.match(/[\u4e00-\u9fa5]{1,3}(區|鄉|鎮|市(?!區|鄉|鎮))/g);
         const itemArea = itemAreaMatches ? itemAreaMatches[itemAreaMatches.length - 1] : '';
 
-        // 1. 完全比對字串
+        // 1. 完全比對
         if (fullItemStr === cleanUser || locStr.replace(/\s+/g, '') === cleanUser) {
             bestMatch = item; break;
         }
-
-        // 2. 智慧比對: 行政區與郵遞區號 皆完全吻合 (精準匹配)
+        // 2. 郵遞區號+行政區 完全一致
         if (userArea && itemArea && userArea === itemArea && userZip && itemZip && userZip === itemZip) {
             bestMatch = item; break;
         }
-
-        // 3. 只有郵遞區號吻合 (保底)
-        if (userZip && itemZip && userZip === itemZip && !bestMatch) {
-            bestMatch = item;
-        }
-
-        // 4. 只有行政區吻合 (保底)
+        // 3. 只有行政區一致 (新竹市香山區 -> 香山區)
         if (userArea && itemArea && userArea === itemArea && !bestMatch) {
             bestMatch = item;
         }
-        
-        // 5. 字串互相包含 (最後保底)
+        // 4. 只有郵遞區號一致
+        if (userZip && itemZip && userZip === itemZip && !bestMatch) {
+            bestMatch = item;
+        }
+        // 5. 模糊包含
         if (userArea && fullItemStr.includes(userArea) && !bestMatch) {
             bestMatch = item;
         }
       }
 
-      if (bestMatch) {
-          return isArray ? bestMatch : state.priceMap[bestMatch._originalKey];
-      }
-      return null;
+      return bestMatch ? (isArray ? bestMatch : state.priceMap[bestMatch._originalKey]) : null;
     }
 
     // 計算加點距離 (使用 Google Maps Distance Matrix API)
@@ -446,60 +437,57 @@
       const mainData = findPriceData(state.airport, state.district);
       const extraData = state.hasExtraPoint ? findPriceData(state.airport, state.extraDistrict) : null;
       
-      // 支援各種未知表頭，利用關鍵字掃描物件
+      // 智慧提取報價金額 (d小車, e大車, f豪華車)
       const extract = (d) => {
         if (!d) return 0;
         let val = 0;
+        const type = state.carType;
         
         for (let key in d) {
           const k = key.toLowerCase();
-          if (state.carType === '大車') {
-            if (k === 'e' || k.includes('大車') || k === 'large') val = d[key];
-          } else if (state.carType === '豪華車') {
-            if (k === 'f' || k.includes('豪華') || k === 'luxury') val = d[key];
-          } else {
-            if (k === 'd' || k.includes('小車') || k === 'small') val = d[key];
-          }
-          if (val) break; // 找到對應金額即跳出迴圈
+          if (type === '大車' && (k === 'e' || k.includes('大車') || k === 'large')) val = d[key];
+          else if (type === '豪華車' && (k === 'f' || k.includes('豪華') || k === 'luxury')) val = d[key];
+          else if (type === '小車' && (k === 'd' || k.includes('小車') || k === 'small')) val = d[key];
+          if (val) break;
         }
         
-        // 保底直接找特定鍵值
+        // 沒抓到時的保底
         if (!val) {
-           if (state.carType === '大車') val = d.large || d.e || d['大車'] || d['e大車'];
-           else if (state.carType === '豪華車') val = d.luxury || d.f || d['豪華車'] || d['f豪華車'];
-           else val = d.small || d.d || d['小車'] || d['d小車'];
+           if (type === '大車') val = d.e || d['大車'] || d['e大車'] || 0;
+           else if (type === '豪華車') val = d.f || d['豪華車'] || d['f豪華車'] || 0;
+           else val = d.d || d['小車'] || d['d小車'] || 0;
         }
 
-        // 去除可能的逗號與非數字字元 (例如 1,500)
         return parseInt(String(val).replace(/[^\d]/g, ''), 10) || 0;
       };
       
-      // 基本車資邏輯保持不變：以較遠/貴的區域為基礎
-      const p1 = extract(mainData), p2 = extract(extraData);
-      const baseInfo = (state.hasExtraPoint && p2 > p1) ? { p: p2, n: state.extraDistrict } : { p: p1, n: state.district };
+      const p1 = extract(mainData);
+      const p2 = extract(extraData);
+
+      // 加點計費基準：取兩者較高者
+      const basePrice = (state.hasExtraPoint) ? Math.max(p1, p2) : p1;
+      const baseName = (state.hasExtraPoint && p2 > p1) ? state.extraDistrict : state.district;
+      
       const h = parseInt(state.timeHour);
       
-      // 依據新規則計算加點費
-      let extraFee = 0;
+      // 加點額外費 (距離單位)
+      let extraDistFee = 0;
       let extraLabel = "加點服務費";
       
       if (state.hasExtraPoint) {
         if (state.district && state.extraDistrict && state.extraAddress && state.address) {
           if (state.extraDistanceKm > 0) {
-            // 判斷是否同縣市 (擷取區域字串中的縣市名)
             const city1 = state.district.split(' ')[1] || '';
             const city2 = state.extraDistrict.split(' ')[1] || '';
             const isSameCity = (city1 && city2 && city1 === city2);
-            
-            // 每 5km 為一個單位 (不滿 5km 算 5km)
             const chunks = Math.max(1, Math.ceil(state.extraDistanceKm / 5));
             const distCharge = chunks * 100;
             
             if (isSameCity) {
-              extraFee = distCharge;
+              extraDistFee = distCharge;
               extraLabel = `加點服務 (同縣市 ${state.extraDistanceKm.toFixed(1)}km)`;
             } else {
-              extraFee = 200 + distCharge;
+              extraDistFee = 200 + distCharge;
               extraLabel = `加點服務 (跨縣市起跳+$200, 距 ${state.extraDistanceKm.toFixed(1)}km)`;
             }
           } else {
@@ -515,18 +503,19 @@
         night: (h>=22||h<6)?200:0,
         infant: state.infants*200, 
         signboard: state.extraSignboard?200:0,
-        extra: extraFee
+        extra: extraDistFee
       };
-      const total = baseInfo.p > 0 ? (baseInfo.p + Object.values(fees).reduce((a,b)=>a+b,0)) : null;
+
+      const total = basePrice > 0 ? (basePrice + Object.values(fees).reduce((a,b)=>a+b,0)) : null;
       
       DOM.displayCarTypeName.innerText = `基本車資 (${state.carType})`;
       if (state.serviceType === '接機') {
-        DOM.displayRoute.innerText = `${state.airport} → ${baseInfo.n || '未選'}`;
+        DOM.displayRoute.innerText = `${state.airport} → ${baseName || '未選'}`;
       } else {
-        DOM.displayRoute.innerText = `${baseInfo.n || '未選'} → ${state.airport}`;
+        DOM.displayRoute.innerText = `${baseName || '未選'} → ${state.airport}`;
       }
 
-      DOM.displayBasePrice.innerText = baseInfo.p ? `$${baseInfo.p}` : '待報價';
+      DOM.displayBasePrice.innerText = basePrice ? `$${basePrice}` : '待報價';
       DOM.displayTotal.innerText = total ? `$${total}` : '待報價';
       DOM.displayPayment.innerText = `付款：${state.payment}`;
 
@@ -561,7 +550,7 @@
         document.getElementById(aId).value = addrStr;
         state[dId] = distStr; state[aId] = addrStr;
         
-        updateExtraDistance(); // 呼叫更新距離 API
+        updateExtraDistance();
       };
 
       const initAC = (inputId, dId) => {
@@ -701,8 +690,6 @@
       if (state.userRemarks && state.userRemarks.trim() !== '') {
         lineText += `備註：${state.userRemarks.trim()}\n`;
       }
-      
-      // 如果有填寫信箱，就加入 LINE 訊息中
       if (state.email && state.email.trim() !== '') {
         lineText += `信箱：${state.email.trim()}\n`;
       }
@@ -779,7 +766,6 @@
       if(el) el.addEventListener('input', (e) => state[id] = e.target.value);
     });
 
-    // 讓手動輸入地址時也能觸發距離計算 (在失去焦點時)
     ['address', 'extraAddress'].forEach(id => {
       const el = document.getElementById(id);
       if(el) {
