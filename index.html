@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>安星租車 | 機場接送｜包車旅遊｜商務用車</title>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <style>
+        /* 基礎重置與變數 */
+        :root {
+            --primary-color: #1A365D; /* 深藍色，代表專業商務 */
+            --secondary-color: #D69E2E; /* 金色，代表尊榮感 */
+            --text-color: #333333;
+            --bg-light: #F7FAFC;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Noto Sans TC', sans-serif;
+        }
+
+        body {
+            color: var(--text-color);
+            line-height: 1.6;
+        }
+
+        a {
+            text-decoration: none;
+            color: inherit;
+        }
+
+        /* 導覽列 */
+        header {
+            background-color: white;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            position: fixed;
+            width: 100%;
+            top: 0;
+            z-index: 1000;
+        }
+
+        .nav-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: var(--primary-color);
+        }
+
+        .logo span {
+            color: var(--secondary-color);
+        }
+
+        .nav-links a {
+            margin-left: 2rem;
+            font-weight: 500;
+            transition: color 0.3s;
+        }
+
+        .nav-links a:hover {
+            color: var(--secondary-color);
+        }
+
+        /* 橫幅 (Hero Section) */
+        .hero {
+            margin-top: 70px;
+            background: linear-gradient(rgba(26, 54, 93, 0.7), rgba(26, 54, 93, 0.7)), url('https://images.unsplash.com/photo-1449965408869-eaa3f722e40d?q=80&w=1920&auto=format&fit=crop') center/cover;
+            height: 80vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            color: white;
+            padding: 0 2rem;
+        }
+
+        .hero-content h1 {
+            font-size: 3.5rem;
+            margin-bottom: 1rem;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+        }
+
+        .hero-content p {
+            font-size: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .btn {
+            display: inline-block;
+            background-color: #00B900; /* LINE 的綠色 */
+            color: white;
+            padding: 1rem 2.5rem;
+            border-radius: 50px;
+            font-size: 1.2rem;
+            font-weight: bold;
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+
+        .btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 5px 15px rgba(0, 185, 0, 0.4);
+        }
+
+        /* 服務項目 */
+        .services {
+            padding: 5rem 2rem;
+            background-color: var(--bg-light);
+            text-align: center;
+        }
+
+        .section-title {
+            font-size: 2.5rem;
+            color: var(--primary-color);
+            margin-bottom: 3rem;
+        }
+
+        .services-grid {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+        }
+
+        .service-card {
+            background: white;
+            padding: 2.5rem 2rem;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+            transition: transform 0.3s;
+        }
+
+        .service-card:hover {
+            transform: translateY(-10px);
+        }
+
+        .service-icon {
+            font-size: 3rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .service-card h3 {
+            font-size: 1.5rem;
+            margin-bottom: 1rem;
+            color: var(--primary-color);
+        }
+
+        /* 關於我們 / 優勢 */
+        .features {
+            padding: 5rem 2rem;
+            max-width: 1200px;
+            margin: 0 auto;
+            text-align: center;
+        }
+
+        /* 頁尾 */
+        footer {
+            background-color: var(--primary-color);
+            color: white;
+            text-align: center;
+            padding: 3rem 2rem;
+        }
+
+        .footer-contact {
+            margin-bottom: 2rem;
+        }
+
+        .footer-contact p {
+            margin: 0.5rem 0;
+            font-size: 1.2rem;
+        }
+
+        .line-link {
+            color: #00B900;
+            font-weight: bold;
+        }
+
+        /* 響應式設計 */
+        @media (max-width: 768px) {
+            .nav-links {
+                display: none; /* 手機版暫時隱藏選單，可後續加入漢堡選單 */
+            }
+            .hero-content h1 {
+                font-size: 2.5rem;
+            }
+            .hero-content p {
+                font-size: 1.2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="nav-container">
+            <div class="logo">安星<span>租車</span></div>
+            <nav class="nav-links">
+                <a href="#services">服務項目</a>
+                <a href="#features">車隊優勢</a>
+                <a href="https://lin.ee/7J6oDYv" target="_blank">聯絡我們</a>
+            </nav>
+        </div>
+    </header>
+
+    <section class="hero">
+        <div class="hero-content">
+            <h1>尊榮體驗，安全隨行</h1>
+            <p>機場接送｜包車旅遊｜商務用車</p>
+            <a href="https://lin.ee/7J6oDYv" target="_blank" class="btn">
+                加入 LINE 預約：@220ewdah
+            </a>
+        </div>
+    </section>
+
+    <section id="services" class="services">
+        <h2 class="section-title">專業服務項目</h2>
+        <div class="services-grid">
+            <div class="service-card">
+                <div class="service-icon">✈️</div>
+                <h3>機場接送</h3>
+                <p>提供全台機場安全、準時的接機與送機服務。免去搬運行李與等候的煩惱，讓您的旅程有最美好的開始與結束。</p>
+            </div>
+            <div class="service-card">
+                <div class="service-icon">🏞️</div>
+                <h3>包車旅遊</h3>
+                <p>量身定制專屬行程，專業司機帶您深度暢遊台灣之美。不論是家庭旅遊、朋友聚會，皆能輕鬆享受旅程。</p>
+            </div>
+            <div class="service-card">
+                <div class="service-icon">💼</div>
+                <h3>商務用車</h3>
+                <p>提供頂級商務車款與專業訓練司機，展現企業尊榮形象。適合貴賓接待、商務會議、高階主管用車。</p>
+            </div>
+        </div>
+    </section>
+
+    <section id="features" class="features">
+        <h2 class="section-title">選擇安星的理由</h2>
+        <div class="services-grid">
+            <div class="service-card" style="box-shadow: none; border: 1px solid #eee;">
+                <h3 style="color: var(--secondary-color);">✅ 合法座車</h3>
+                <p>全車系皆為合法租賃車輛，定期保養維護，安全有保障。</p>
+            </div>
+            <div class="service-card" style="box-shadow: none; border: 1px solid #eee;">
+                <h3 style="color: var(--secondary-color);">✅ 專業司機</h3>
+                <p>司機皆具備多年駕駛經驗，態度親切，熟悉全台路況。</p>
+            </div>
+            <div class="service-card" style="box-shadow: none; border: 1px solid #eee;">
+                <h3 style="color: var(--secondary-color);">✅ 價格透明</h3>
+                <p>報價即為最終價格，絕不巧立名目加價，讓您安心預約。</p>
+            </div>
+        </div>
+    </section>
+
+    <footer>
+        <div class="footer-contact">
+            <h2>聯絡安星租車</h2>
+            <br>
+            <p>24小時專人為您服務，歡迎隨時使用 LINE 與我們聯繫</p>
+            <p>LINE ID：<a href="https://lin.ee/7J6oDYv" target="_blank" class="line-link">@220ewdah</a></p>
+        </div>
+        <p>&copy; 2026 安星租車 Anxing Limo. All Rights Reserved.</p>
+    </footer>
+
+</body>
+</html>
