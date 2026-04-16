@@ -57,6 +57,38 @@
             background-position: center;
             background-attachment: fixed;
         }
+
+        /* 價目表手機版全螢幕自動縮放 (免捲動) */
+        @media (max-width: 768px) {
+            .responsive-pricing-table {
+                min-width: 100% !important;
+                font-size: 2.6vw !important; /* 根據螢幕寬度自動縮放整體字體 */
+            }
+            .responsive-pricing-table th, 
+            .responsive-pricing-table td {
+                padding: 1vw 0.5vw !important; /* 縮小內距以適應小螢幕 */
+                line-height: 1.2 !important;
+            }
+            .responsive-pricing-table th.whitespace-nowrap,
+            .responsive-pricing-table td.whitespace-nowrap {
+                white-space: normal !important;
+                word-break: keep-all;
+            }
+            /* 標題與重點文字的比例微調 */
+            .responsive-pricing-table .text-xl,
+            .responsive-pricing-table .text-2xl,
+            .responsive-pricing-table .text-lg {
+                font-size: 3vw !important;
+            }
+            .responsive-pricing-table .text-xs,
+            .responsive-pricing-table .text-sm {
+                font-size: 2.2vw !important;
+            }
+            /* 縮小左側內距 */
+            .responsive-pricing-table .pl-4 {
+                padding-left: 1.5vw !important;
+            }
+        }
     </style>
 </head>
 <body class="font-sans text-gray-800 antialiased bg-gray-50">
@@ -178,9 +210,9 @@
 
             <!-- 價目表主體容器 -->
             <div class="bg-primary rounded-3xl p-4 md:p-8 shadow-2xl text-white">
-                <!-- 使表格在手機端可以橫向滑動 -->
-                <div class="overflow-x-auto pb-4">
-                    <table class="w-full text-sm md:text-base text-center border-collapse border border-white/20 min-w-[900px]">
+                <!-- 移除強制橫向滑動的設定，並讓表格適應螢幕寬度 -->
+                <div class="overflow-hidden w-full pb-4">
+                    <table class="w-full text-sm md:text-base text-center border-collapse border border-white/20 responsive-pricing-table">
                         <thead>
                             <tr class="bg-primaryDark">
                                 <th rowspan="3" colspan="2" class="border border-white/20 p-4 text-xl md:text-2xl font-bold whitespace-nowrap">桃園機場價格表</th>
@@ -354,129 +386,4 @@
                                 <li>• 乘車時段 23:00-04:59 : <span class="text-secondary font-bold">+$100</span></li>
                                 <li>• 安全座椅 : <span class="text-secondary font-bold">+$200/張</span> (可指定前向/後向)</li>
                                 <li>• 增高墊 : <span class="text-secondary font-bold">+$100/張</span></li>
-                                <li>• 舉牌 : <span class="text-secondary font-bold">+$200</span></li>
-                                <li>• 指定車款 : <span class="text-secondary font-bold">+$500</span></li>
-                                <li>
-                                    • 加點 : 按距離計費，停靠點以"順向"為原則，同縣市加點每5KM+100元，未滿5KM則以5KM計算，每一地點等候時間10分鐘為限<br>
-                                    <span class="text-gray-300 ml-3">※ 如預約時無加點行程，當天服司機無法多停靠上下車點（車輛均裝有GPS）請體諒司機無法私自增加停靠</span><br>
-                                    <span class="text-gray-300 ml-3">　若臨時需多增加上下車點，可以告知司機請司機回報公司後方可執行『臨時加點服務』</span>
-                                </li>
-                                <li>
-                                    • 等候時間 : (若超過等候時間司機仍無法與您取得聯繫或上車，將收取全額費用)<br>
-                                    <div class="ml-3 mt-1">
-                                        ◆ 接機 : 依航班實際抵達時間等候 75 分鐘，第76 分鐘起每30分鐘酌收待時費用300元<br>
-                                        ◆ 送機/一般接送 : 預約時間起等候 15 分鐘，逾時第 16 分鐘起每 15 分鐘酌收待時費用 300 元<br>
-                                        <span class="text-gray-300">　如需延長原規範之等候時間，為確保能完成您預約的接送服務，請務必提前通知客服中心</span>
-                                    </div>
-                                </li>
-                                <li>• 農曆春節、連續假期另有加價，以客服報價為主</li>
-                            </ul>
-                        </div>
-
-                        <!-- 注意事項 -->
-                        <div>
-                            <h4 class="font-bold text-white mb-3 text-base">【注意事項】</h4>
-                            <ul class="space-y-3 text-xs md:text-sm opacity-90">
-                                <li>1、請依實際人數及行李件數尺寸預約車款</li>
-                                <li>2、為了行車安全及法規，乘車時請繫上安全帶，車內座位區、腳踏墊區不得放置行李隨身行李背包除外<br>
-                                    <span class="text-gray-300 ml-5">預約時請評估行李箱大小決定車輛，司機現場服務時遇實際件數與預約資料不符時，本公司有權利終止租用車輛拒載服務，且視同服務已完成，恕無法退費。</span>
-                                </li>
-                                <li>3、為維護乘車品質，顧及每位貴賓權益，車內請勿飲食</li>
-                                <li>4、因應政府「小型車附載幼童安全乘坐實施及宣導辦法」規範，12歲以下兒童乘坐小客車，需繫安全帶或使用安全座椅(增高座墊)<br>
-                                    <span class="text-gray-300 ml-5">乘坐嬰幼兒若在0-4歲且體重18公斤內，強制使用安全座椅</span><br>
-                                    <span class="text-secondary ml-5 mt-1 block">【此項目受法令規範，如未依實際需求數量加購與安裝安全椅/增高墊，所有一切責任（罰款）將由乘車人承擔。】</span>
-                                </li>
-                            </ul>
-                        </div>
-                    </div>
-                    
-                    <p class="text-center text-xs opacity-70 pt-6 border-t border-white/10 mt-6">
-                        - 以上如有不便請多包涵，謝謝。安星租車保有調整或終止本方案之權利 -
-                    </p>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- 乘車須知 (Notice Section) -->
-    <section id="notice" class="py-20 bg-gray-50 border-t border-gray-200">
-        <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="text-center mb-10">
-                <h2 class="text-3xl font-bold text-primary mb-4">乘車規範與須知</h2>
-                <div class="w-16 h-1 bg-secondary mx-auto rounded-full"></div>
-            </div>
-            
-            <div class="bg-white p-8 md:p-10 rounded-2xl shadow-sm border-l-8 border-secondary relative overflow-hidden">
-                <i class="fas fa-exclamation-circle absolute -right-6 -top-6 text-9xl text-gray-50 opacity-50"></i>
-                <div class="relative z-10">
-                    <p class="text-gray-600 mb-6 font-medium text-lg">為尊重後續其他乘客權益，及維護車內高品質之清潔，請貴賓務必配合以下規範：</p>
-                    <ul class="space-y-4 text-gray-700">
-                        <li class="flex items-start gap-3">
-                            <span class="bg-gray-100 text-primary font-bold rounded-full w-6 h-6 flex items-center justify-center shrink-0 mt-0.5">1</span>
-                            <p>乘客坐椅請勿放置行李，以免刮傷皮椅或造成髒污。</p>
-                        </li>
-                        <li class="flex items-start gap-3">
-                            <span class="bg-gray-100 text-primary font-bold rounded-full w-6 h-6 flex items-center justify-center shrink-0 mt-0.5">2</span>
-                            <p>車內 <strong class="text-red-600">嚴禁抽煙、嚼食檳榔及飲食</strong>（飲用白開水除外）。</p>
-                        </li>
-                        <li class="flex items-start gap-3">
-                            <span class="bg-gray-100 text-primary font-bold rounded-full w-6 h-6 flex items-center justify-center shrink-0 mt-0.5">3</span>
-                            <p>為維護車室環境，車內禁止攜帶寵物同行。</p>
-                        </li>
-                    </ul>
-                    <div class="mt-8 p-4 bg-red-50 rounded-lg border border-red-100">
-                        <p class="text-sm text-red-600">※ 注意事項：若因違反上述情形，導致車輛設備毀損、髒亂或殘留嚴重異味，預約人須全數賠償相關修繕、清理費用及車輛停工之營業損失，敬請配合見諒。</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- 頁尾與行動呼籲 (Footer / CTA) -->
-    <footer class="bg-primary text-white">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-            <div class="text-center max-w-2xl mx-auto">
-                <h2 class="text-3xl font-bold mb-6">準備好預約您的專屬座車了嗎？</h2>
-                <p class="text-blue-200 mb-10 text-lg">24小時專人為您服務，歡迎點擊下方按鈕或加入 LINE 官方帳號與我們聯繫，獲取即時報價！</p>
-                
-                <div class="bg-white/10 p-8 rounded-2xl backdrop-blur-md border border-white/20 inline-block w-full md:w-auto">
-                    <p class="text-gray-300 font-medium mb-3">安星租車 LINE 官方帳號</p>
-                    <div class="text-4xl md:text-5xl font-black text-secondary tracking-wider mb-6">
-                        @220ewdah
-                    </div>
-                    <a href="https://lin.ee/7J6oDYv" target="_blank" class="w-full md:w-auto inline-flex justify-center items-center gap-3 bg-line hover:bg-green-600 text-white px-10 py-4 rounded-full text-xl font-bold transition-all shadow-lg hover:shadow-xl hover:-translate-y-1">
-                        <i class="fab fa-line text-2xl"></i>
-                        點擊加好友預約
-                    </a>
-                </div>
-                <p class="mt-6 text-sm text-blue-300 opacity-80">溫馨提示：如未於 LINE 收到回覆確認，則視同未預約成功喔！</p>
-            </div>
-        </div>
-        
-        <!-- Copyright -->
-        <div class="border-t border-white/10 bg-black/20">
-            <div class="max-w-7xl mx-auto px-4 py-6 text-center text-sm text-blue-200/60">
-                <p>&copy; 2026 安星租車 Anxing Limo. All Rights Reserved.</p>
-            </div>
-        </div>
-    </footer>
-
-    <!-- 手機版選單切換腳本 -->
-    <script>
-        const btn = document.getElementById('mobile-menu-btn');
-        const menu = document.getElementById('mobile-menu');
-
-        btn.addEventListener('click', () => {
-            menu.classList.toggle('hidden');
-        });
-
-        // 點擊選單連結後自動收起
-        const links = menu.querySelectorAll('a');
-        links.forEach(link => {
-            link.addEventListener('click', () => {
-                menu.classList.add('hidden');
-            });
-        });
-    </script>
-</body>
-</html>
+                                <li>• 舉牌 :
