@@ -88,7 +88,7 @@
               <option>小姐</option>
             </select>
           </div>
-          <input type="tel" id="phone" class="w-full p-3 border rounded-sm font-mono outline-none focus:border-[#553f62] bg-white text-base" placeholder="聯絡電話 09xx-xxx-xxx" maxlength="12">
+          <input type="tel" id="phone" class="w-full p-3 border rounded-sm font-mono outline-none focus:border-[#553f62] bg-white text-base" placeholder="聯絡電話 09xxxxxxxx (10碼)" maxlength="10">
           <input type="email" id="email" class="w-full p-3 border rounded-sm outline-none focus:border-[#553f62] bg-white text-[12px]" placeholder="MAIL 電子信箱 (建議提供，以免無法即時聯絡)">
 
           <div class="pt-2 border-t border-gray-100 mt-2 relative">
@@ -349,7 +349,6 @@
         }
       }
 
-      // 付款手續費
       const transFee = state.payment.includes('刷卡') ? 30 : 0;
 
       const fees = {
@@ -376,7 +375,6 @@
       if(fees.tf) DOM.feesBlock.innerHTML += `<div class="flex justify-between text-white/90 text-sm"><span>└ 刷卡手續費</span><span>+$30</span></div>`;
     }
 
-    // --- 距離 API ---
     function updateDist() {
       if (!state.hasExtraPoint || !state.address || !state.extraAddress) {
         state.extraDistanceKm = 0; calculate(); return;
@@ -395,7 +393,6 @@
       });
     }
 
-    // --- 初始化功能 ---
     async function start() {
       state.reservationId = generateId();
       DOM.displayId.innerText = state.reservationId;
@@ -403,11 +400,9 @@
       for(let i=0; i<24; i++) DOM.timeHour.add(new Option(String(i).padStart(2,'0'), i));
       for(let i=0; i<12; i++) DOM.timeMinute.add(new Option(String(i*5).padStart(2,'0'), String(i*5).padStart(2,'0')));
       
-      // 載入報價
       fetch(`${GAS_WEBAPP_URL}?action=getPrices&t=${Date.now()}`)
         .then(r => r.json()).then(d => { if(d.status==='success') { state.priceMap=d.prices; calculate(); } });
 
-      // 初始化 LIFF
       if (typeof liff !== 'undefined') {
         liff.init({ liffId: LINE_LIFF_ID }).then(() => {
           if (!sessionStorage.getItem('notified')) {
@@ -421,7 +416,6 @@
         });
       }
 
-      // 初始化 Google Map
       const s = document.createElement('script');
       s.src = `https://maps.googleapis.com/maps/api/js?key=${GOOGLE_MAPS_API_KEY}&libraries=places&language=zh-TW`;
       s.onload = () => {
@@ -446,13 +440,12 @@
       document.head.appendChild(s);
     }
 
-    // --- 事件綁定 ---
     window.onload = start;
 
     document.getElementById('reservation-form').onsubmit = async (e) => {
       e.preventDefault();
       if (!state.name || state.phone.length < 10 || !state.district) {
-        return Swal.fire({ icon:'error', title:'請填寫完整資訊', text:'姓名、電話、地址為必填項目。', confirmButtonColor:'#553f62' });
+        return Swal.fire({ icon:'error', title:'請填寫完整資訊', text:'姓名、電話(10碼)、地址為必填項目。', confirmButtonColor:'#553f62' });
       }
       if (!document.getElementById('agreed').checked) return Swal.fire('請勾選同意條款');
 
@@ -484,8 +477,13 @@
       }
     };
 
-    // 其他動態綁定
-    ['name','phone','email','date','timeHour','timeMinute','serviceType','airport','carType','payment','flightNumber','userRemarks'].forEach(id => {
+    document.getElementById('phone').oninput = (e) => {
+      let val = e.target.value.replace(/\D/g, '').slice(0, 10);
+      e.target.value = val;
+      state.phone = val;
+    };
+
+    ['name','email','date','timeHour','timeMinute','serviceType','airport','carType','payment','flightNumber','userRemarks'].forEach(id => {
       const el = document.getElementById(id);
       if(el) {
         el.addEventListener('change', (e) => { state[id] = e.target.value; calculate(); });
@@ -505,7 +503,6 @@
       calculate();
     };
 
-    // 人數下拉選單生成
     function updateOptions() {
       const render = (el, max) => {
         const val = el.value; el.innerHTML = '';
@@ -515,15 +512,30 @@
       render(DOM.adults, 6); render(DOM.children, 6); render(DOM.infants, 6);
       render(DOM.carryOn, 6); render(DOM.checkedBag, 6);
       
-      const tp = parseInt(DOM.adults.value)+parseInt(DOM.children.value)+parseInt(DOM.infants.value);
+      const a = parseInt(DOM.adults.value);
+      const c = parseInt(DOM.children.value);
+      const i = parseInt(DOM.infants.value);
+      const tp = a + c + i;
+      
+      let forceLarge = false;
+      let reason = '';
+
       if (tp > 4) { 
-        state.carType='大車'; 
-        DOM.carType.value='大車'; 
-        DOM.carType.disabled=true; 
-        DOM.carTypeMsg.innerText='※ 人數達5人以上強制大車'; 
+        forceLarge = true;
+        reason = '人數達 5 人以上強制大車';
+      } else if (tp === 4 && i > 0) {
+        forceLarge = true;
+        reason = '人數滿 4 人且含幼童強制大車';
+      }
+
+      if (forceLarge) { 
+        state.carType = '大車'; 
+        DOM.carType.value = '大車'; 
+        DOM.carType.disabled = true; 
+        DOM.carTypeMsg.innerText = `※ ${reason}`; 
         DOM.carTypeMsg.classList.remove('hidden-block'); 
       } else { 
-        DOM.carType.disabled=false; 
+        DOM.carType.disabled = false; 
         DOM.carTypeMsg.classList.add('hidden-block'); 
       }
       calculate();
