@@ -161,7 +161,7 @@
           </div>
           <div class="grid grid-cols-2 gap-2 text-center text-[11px] font-bold text-gray-700">
             <div>登機箱<select id="carryOn" class="w-full p-3 border bg-white text-base"></select></div>
-            <div>託運(21-29吋)<select id="checkedBag" class="w-full p-3 border bg-white text-base"></select></div>
+            <div>託運(21~29吋)<select id="checkedBag" class="w-full p-3 border bg-white text-base"></select></div>
           </div>
         </section>
 
@@ -190,7 +190,6 @@
             <input type="text" id="signboardText" class="w-full mt-2 p-3 border rounded-sm outline-none focus:border-[#553f62] bg-white text-base hidden-block" placeholder="輸入舉牌內容">
           </div>
 
-          <!-- 報價單視覺區 -->
           <div class="bg-[#553f62] text-white p-6 border-t-8 border-white/20 rounded-sm shadow-xl font-mono">
             <h3 class="text-sm font-black border-b border-white/20 pb-2 mb-4 flex items-center gap-2 uppercase tracking-widest">
               <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><line x1="10" y1="9" x2="8" y2="9"/></svg> 報價明細內容
@@ -251,7 +250,7 @@
 
   <script>
     // --- 環境變數 ---
-    const GAS_WEBAPP_URL = 'https://script.google.com/macros/s/AKfycbyasqZX5a5P3sh6AHz3QgqhCJynfpPfCRCrW3BG2x_q9kQxDf7ejHKg0JRqi6i9j60M/exec';
+    const GAS_WEBAPP_URL = 'https://script.google.com/macros/s/AKfycbxg636TnWyiWBdj7gyLyzglO2vYkA4MuEY5uQHwdUVEY4je-tTuHjz6bMXw_dbRWA1J/exec';
     const GOOGLE_MAPS_API_KEY = 'AIzaSyAxYym5ZR8puPb0iiycHdwzTJTKH0Aears';
     const LINE_LIFF_ID = '2009792282-1qTp0cNm';
 
@@ -303,60 +302,65 @@
       return `AS${ds}${r}`;
     }
 
-    // 智慧搜尋 logic (強化比對：支援 300, 351, 香山, 頭份 等各種變體)
+    // 智慧比對核心逻辑
     function findPrice(airport, loc) {
       if (!loc || !state.priceMap || !state.priceMap.length) return null;
       
       const aptKey = airport.replace('機場','');
-      // 正規化輸入地址：移除空格、統一糾錯
-      let normalizedLoc = loc.replace(/\s+/g,'').replace('苗票', '苗栗');
+      // 正規化地址 (移除空格、校正錯字)
+      let normalizedUserLoc = loc.replace(/\s+/g,'').replace('苗票', '苗栗');
       
       // 提取使用者輸入中的 3 碼數字 (郵區)
-      const zipMatch = normalizedLoc.match(/\d{3}/);
+      const zipMatch = normalizedUserLoc.match(/\d{3}/);
       const userZip = zipMatch ? zipMatch[0] : null;
 
-      // 提取核心地名 (移除縣市字眼，僅留行政區)
-      const coreAreaName = normalizedLoc.replace(/台灣|台北市|新北市|桃園市|新竹市|新竹縣|苗栗縣|台中市/g, '');
+      // 提取核心地名 (移除常見行政字眼)
+      const coreAreaName = normalizedUserLoc.replace(/台灣|台北市|新北市|桃園市|新竹市|新竹縣|苗栗縣|台中市/g, '');
 
       let bestMatch = null;
       for (const item of state.priceMap) {
+        // 先過濾機場
         const itemApt = String(item.a || item.a機場 || "");
         if (!itemApt.includes(aptKey) && !aptKey.includes(itemApt)) continue;
 
-        const itemZip = String(item.b || item.b郵遞區號 || "").trim();
-        const itemArea = String(item.c || item.c地區 || "").trim();
+        // 讀取資料庫中的郵區 (欄位 B) 與地區 (欄位 C)
+        // 考量 GAS 可能會有的鍵值名稱 (a, b, c... 或 a機場, b郵遞區號...)
+        const itemZip = String(item.b || item.b郵遞區號 || item['b郵遞區號'] || "").trim();
+        const itemArea = String(item.c || item.c地區 || item['c地區'] || "").trim();
         const itemAreaShort = itemArea.replace(/區|鄉|鎮|市/g, '');
 
-        // 1. 如果有郵遞區號且完全匹配
-        if (userZip && itemZip === userZip) return item;
+        // 1. 如果郵區完全匹配，直接回傳 (最準確)
+        if (userZip && itemZip && itemZip === userZip) return item;
 
-        // 2. 如果地址字串包含完整的資料庫地區名稱 (如 "香山區")
-        if (itemArea && normalizedLoc.includes(itemArea)) return item;
+        // 2. 如果使用者地址包含資料庫完整行政區名
+        if (itemArea && normalizedUserLoc.includes(itemArea)) return item;
 
-        // 3. 如果地址字串包含短地名 (如 "香山")
-        if (itemAreaShort && coreAreaName.includes(itemAreaShort)) {
-            bestMatch = item;
+        // 3. 如果核心地名包含資料庫行政區 (模糊保底)
+        if (itemAreaShort && (coreAreaName.includes(itemAreaShort) || itemAreaShort.includes(coreAreaName))) {
+          bestMatch = item;
         }
       }
       return bestMatch;
+    }
+
+    function extractFeeFromItem(item) {
+      if (!item) return 0;
+      let val = 0;
+      const type = state.carType;
+      // 支援 d, e, f 或 小車, 大車, 豪華車
+      if (type === '大車') val = item.e || item['e大車'] || item.large || 0;
+      else if (type === '豪華車') val = item.f || item['f豪華車'] || item.luxury || 0;
+      else val = item.d || item['d小車'] || item.small || 0;
+      
+      return parseInt(String(val).replace(/[^\d]/g, ''), 10) || 0;
     }
 
     function calculate() {
       const mainMatch = findPrice(state.airport, state.district);
       const extraMatch = state.hasExtraPoint ? findPrice(state.airport, state.extraDistrict) : null;
       
-      const getVal = (d) => {
-        if (!d) return 0;
-        let v = 0;
-        const type = state.carType;
-        if (type === '大車') v = d.e || d['e大車'] || 0;
-        else if (type === '豪華車') v = d.f || d['f豪華車'] || 0;
-        else v = d.d || d['d小車'] || 0;
-        return parseInt(String(v).replace(/[^\d]/g, ''), 10) || 0;
-      };
-
-      const p1 = getVal(mainMatch);
-      const p2 = getVal(extraMatch);
+      const p1 = extractFeeFromItem(mainMatch);
+      const p2 = extractFeeFromItem(extraMatch);
       
       // 加點計費基準：取兩者中報價較高者
       const base = state.hasExtraPoint ? Math.max(p1, p2) : p1;
@@ -369,7 +373,6 @@
           const c1 = state.district.replace(/\s+/g,'').match(/[\u4e00-\u9fa5]{3}/)?.[0] || "";
           const c2 = state.extraDistrict.replace(/\s+/g,'').match(/[\u4e00-\u9fa5]{3}/)?.[0] || "";
           const same = (c1 && c2 && c1.substring(0,2) === c2.substring(0,2));
-          
           const chunk = Math.max(1, Math.ceil(state.extraDistanceKm / 5));
           extraDistFee = (same ? 0 : 200) + (chunk * 100);
           label = `加點服務 (${state.extraDistanceKm.toFixed(1)}km)`;
@@ -378,6 +381,7 @@
         }
       }
 
+      // 手續費與座椅費用
       const transFee = state.payment.includes('刷卡') ? 30 : 0;
       const infantSeatCount = parseInt(state.infants) || 0;
 
@@ -432,7 +436,6 @@
     async function start() {
       state.reservationId = generateId();
       DOM.displayId.innerText = state.reservationId;
-
       for(let i=0; i<24; i++) DOM.timeHour.add(new Option(String(i).padStart(2,'0'), String(i).padStart(2,'0')));
       for(let i=0; i<12; i++) DOM.timeMinute.add(new Option(String(i*5).padStart(2,'0'), String(i*5).padStart(2,'0')));
       DOM.timeHour.value = "12"; DOM.timeMinute.value = "00";
@@ -459,7 +462,6 @@
             const zip = comps.find(c=>c.types.includes('postal_code'))?.long_name || "";
             const city = comps.find(c=>c.types.includes('administrative_area_level_1'))?.long_name || "";
             const area = comps.find(c=>c.types.includes('sublocality_level_1'))?.long_name || "";
-            
             state[dId] = `${zip} ${city} ${area}`.trim().replace('苗票','苗栗');
             state[aId] = p.name || "";
             document.getElementById(dId).value = state[dId];
