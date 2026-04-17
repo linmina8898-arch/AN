@@ -47,7 +47,8 @@
         <h2 class="text-2xl font-black text-[#553f62] mb-4 text-center">預約資料已成功送出</h2>
         <div class="space-y-4">
           <div class="bg-gray-50 p-4 rounded border border-gray-200 text-sm font-bold text-gray-800 italic text-center">
-            您的預約已成功送出。請您耐心等候客服回覆，感謝配合。
+            您的預約資料已成功送出。
+請您耐心等候，待客服人員為您確認訂單內容無誤後，將回傳轉帳帳號／刷卡QR Code以利完成付款，感謝您的配合。
           </div>
           <div class="relative pt-4">
             <span class="absolute -top-2 left-3 bg-white px-2 text-[10px] font-bold text-gray-400">預約明細備份</span>
@@ -218,7 +219,7 @@
 
         <section class="space-y-4">
           <h2 class="text-lg font-bold border-b-2 border-[#553f62] pb-2 text-[#553f62]">其他備註</h2>
-          <textarea id="userRemarks" rows="4" class="w-full p-3 border rounded-sm outline-none text-sm" placeholder="如攜帶紙箱、胖胖箱、雪板、輪椅等，請告知。"></textarea>
+          <textarea id="userRemarks" rows="4" class="w-full p-3 border rounded-sm outline-none text-sm" placeholder="如攜帶紙箱、胖胖箱、高爾夫球具、雪板、輪椅等，請告知。"></textarea>
         </section>
 
         <section class="mt-4 border-t-2 border-[#553f62] pt-6 pb-4">
@@ -277,16 +278,16 @@
       signboardText: document.getElementById('signboardText')
     };
 
-    /* 強制清除所有「台灣」字眼 */
+    /* 全域過濾：徹底清除「台灣」字眼 */
     function cleanAll(str) {
       if (!str) return "";
       return str.replace(/台灣|臺灣/g, '').trim();
     }
 
-    /* 提取核心字眼 */
+    /* 提取核心地名 (移除行政區後綴) */
     function getCore(str) {
       if (!str) return "";
-      let s = cleanAll(str).replace(/\d+/g, '');
+      let s = cleanAll(str).replace(/\d+/g, ''); // 先移除台灣與郵遞區號
       return s.replace(/市|縣|區|鄉|鎮/g, '').trim();
     }
 
@@ -296,19 +297,22 @@
       return `AS${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}${random}`;
     }
 
-    /* 24小時預約須知彈窗 */
+    /* 24小時預約須知 & 緊急撥號彈窗 (確保在 window.onload 執行) */
     function showNotice() {
       const hasSeenNotice = sessionStorage.getItem('hasSeenNotice');
       if (!hasSeenNotice) {
         Swal.fire({
-          title: '專車預約須知',
+          title: '安星租車 預約須知',
           html: `
             <div style="color: #202020; font-size: 15px; line-height: 1.6; text-align: left; margin-top: 10px;">
-              為確保行程順利，線上預約需於出發時間前 <strong>24 小時</strong> 完成。<br><br>
-              <span style="color: #f07cad; font-weight: bold;">【急單處理】</span><br>
-              24 小時內之需求請直撥：<br>
-              <div style="text-align: center; margin-top: 15px;">
-                <a href="tel:0955311306" style="color: #553f62; font-size: 22px; font-weight: bold; text-decoration: none; display: inline-block; padding: 5px 25px; border: 2px solid #553f62; border-radius: 25px;">0955-311-306</a>
+              <p>為確保行程順利，線上預約需於出發前 <strong>24 小時</strong> 完成。</p>
+              <br>
+              <div style="background: #fff5f5; padding: 12px; border: 1px solid #feb2b2; border-radius: 8px;">
+                <span style="color: #e53e3e; font-weight: bold;">【急單處理】</span><br>
+                24 小時內之需求請直接撥打客服：<br>
+                <div style="text-align: center; margin-top: 10px;">
+                  <a href="tel:0955311306" style="color: #553f62; font-size: 24px; font-weight: bold; text-decoration: none; border-bottom: 2px solid #553f62; padding-bottom: 2px;">0955-311-306</a>
+                </div>
               </div>
             </div>
           `,
@@ -323,7 +327,7 @@
       }
     }
 
-    /* 積分權重匹配演算法 - 解決行政區層級衝突 */
+    /* 積分權重制匹配演算法 - 徹底解決區域衝突 */
     function findPriceData(airport, locString) {
       if (!locString || Object.keys(state.priceMap).length === 0) return null;
       
@@ -343,20 +347,23 @@
         
         let score = 0;
         
-        // 1. 郵遞區號命中 (+100)
-        if (userZip && itemZip === userZip) score += 100;
+        // 1. 郵遞區號命中 (給予基礎極高分)
+        if (userZip && itemZip === userZip) score += 1000;
         
-        // 2. 核心地名精準匹配 (+500)
-        if (userCore && itemCore && (userCore === itemCore)) score += 500;
+        // 2. 核心地名精準匹配 (最強判定：解決香山、板橋等問題)
+        if (userCore && itemCore && (userCore === itemCore)) {
+          score += 500;
+        }
         
-        // 3. 包含關係 (模糊匹配)
-        if (userFull.includes(itemFull)) score += (20 + itemFull.length);
-        if (itemFull.includes(userFull)) score += (10 + userFull.length);
+        // 3. 包含關係 (字數長度加權)
+        if (userFull.includes(itemFull)) score += (100 + itemFull.length * 10);
+        if (itemFull.includes(userFull)) score += (50 + userFull.length * 5);
 
         return { key: k, score };
       }).filter(x => x.score > 0);
 
       if (candidates.length > 0) {
+        // 分數最高者獲勝
         candidates.sort((a, b) => b.score - a.score); 
         return state.priceMap[candidates[0].key];
       }
@@ -405,12 +412,12 @@
       DOM.feesBlock.innerHTML = '';
       if(fees.pk) DOM.feesBlock.innerHTML += `<div class="flex justify-between"><span>└ 接機費</span><span>+$200</span></div>`;
       if(fees.nt) DOM.feesBlock.innerHTML += `<div class="flex justify-between text-yellow-200"><span>└ 夜間加成 (22:00-06:00)</span><span>+$200</span></div>`;
-      if(state.babySeat > 0) DOM.feesBlock.innerHTML += `<div class="flex justify-between"><span>└ 反向座椅 x${state.babySeat}</span><span>+$${state.babySeat * 200}</span></div>`;
-      if(state.childSeat > 0) DOM.feesBlock.innerHTML += `<div class="flex justify-between"><span>└ 正向座椅 x${state.childSeat}</span><span>+$${state.childSeat * 200}</span></div>`;
-      if(state.boosterSeat > 0) DOM.feesBlock.innerHTML += `<div class="flex justify-between"><span>└ 增高墊 x${state.boosterSeat}</span><span>+$${state.boosterSeat * 200}</span></div>`;
-      if(fees.ex > 0) DOM.feesBlock.innerHTML += `<div class="flex justify-between"><span>└ 加點里程費</span><span>+$${fees.ex}</span></div>`;
+      if(state.babySeat > 0) DOM.feesBlock.innerHTML += `<div class="flex justify-between"><span>└ 反向安全座椅 x${state.babySeat}</span><span>+$${state.babySeat * 200}</span></div>`;
+      if(state.childSeat > 0) DOM.feesBlock.innerHTML += `<div class="flex justify-between"><span>└ 正向兒童座椅 x${state.childSeat}</span><span>+$${state.childSeat * 200}</span></div>`;
+      if(state.boosterSeat > 0) DOM.feesBlock.innerHTML += `<div class="flex justify-between"><span>└ 兒童增高坐墊 x${state.boosterSeat}</span><span>+$${state.boosterSeat * 200}</span></div>`;
+      if(fees.ex > 0) DOM.feesBlock.innerHTML += `<div class="flex justify-between"><span>└ 加點里程服務費</span><span>+$${fees.ex}</span></div>`;
       if(fees.sb > 0) DOM.feesBlock.innerHTML += `<div class="flex justify-between"><span>└ 舉牌服務</span><span>+$200</span></div>`;
-      if(fees.tf > 0) DOM.feesBlock.innerHTML += `<div class="flex justify-between"><span>└ 刷卡手續費</span><span>+$30</span></div>`;
+      if(fees.tf > 0) DOM.feesBlock.innerHTML += `<div class="flex justify-between"><span>└ 刷卡金流手續費</span><span>+$30</span></div>`;
     }
 
     function updateExtraDistance() {
@@ -439,6 +446,7 @@
         let city = cleanAll(comps.find(c=>c.types.includes('administrative_area_level_1'))?.long_name || "");
         let area = (comps.find(c=>c.types.includes('sublocality_level_1')) || comps.find(c=>c.types.includes('locality')))?.long_name || "";
         
+        // 特殊校正：新竹香山 (強制郵遞區號)
         if (full.includes("香山")) { zip="300"; city="新竹市"; area="香山區"; }
         
         state[dId] = `${zip} ${city} ${area}`.trim();
@@ -486,7 +494,7 @@
       for(let i=0; i<60; i+=5) DOM.timeMinute.add(new Option(String(i).padStart(2,'0'), String(i).padStart(2,'0')));
       DOM.timeHour.value = "12"; DOM.timeMinute.value = "00";
       
-      showNotice(); // 確保找回提醒
+      showNotice(); // 啟動畫面時顯示須知與電話
       loadPrices();
       initGoogleMaps();
       if(typeof liff !== 'undefined') {
@@ -518,12 +526,14 @@
       else DOM.childSeatsBlock.classList.add('hidden-block');
 
       if (tp > 6 || tl > 6) {
-          DOM.limitMsg.innerText = `⚠️ 警告：超過承載上限 (6人6件)。`;
+          DOM.limitMsg.innerText = `⚠️ 警告：已超過單車承載上限 (6人6件)。`;
           DOM.limitMsg.classList.remove('hidden-block');
           DOM.submitBtn.disabled = true;
+          DOM.submitBtn.classList.replace('bg-[#553f62]', 'bg-gray-400');
       } else {
           DOM.limitMsg.classList.add('hidden-block');
           DOM.submitBtn.disabled = false;
+          DOM.submitBtn.classList.replace('bg-gray-400', 'bg-[#553f62]');
       }
       
       if((tp > 4) || (tp === 4 && infants > 0)) { 
@@ -564,10 +574,10 @@
     document.getElementById('reservation-form').onsubmit = async (e) => {
       e.preventDefault();
       if (!state.name || state.phone.length < 10 || !state.district) {
-        return Swal.fire({title:'資訊不完整', text:'請填寫姓名、電話並選取正確地址', icon:'error'});
+        return Swal.fire({title:'資訊不完整', text:'請填寫正確姓名、電話並選取地址', icon:'error', customClass:{popup:'swal-custom-radius'}});
       }
       if (!document.getElementById('agreed').checked) {
-        return Swal.fire({title:'提醒', text:'請勾選同意條款', icon:'info'});
+        return Swal.fire({title:'提醒', text:'請勾選同意條款以繼續預約', icon:'info', customClass:{popup:'swal-custom-radius'}});
       }
 
       DOM.submitBtn.disabled = true; 
@@ -585,7 +595,7 @@
       const msg = `【安星租車 預約成功】\n` +
                   `預約編號：${state.reservationId}\n` +
                   `乘車人：${state.name} ${state.title}\n` +
-                  `聯絡電話：${formatPhone(state.phone)}\n` +
+                  `聯絡電話：${state.phone}\n` +
                   `乘車日期：${state.date} ${state.timeHour}:${state.timeMinute}\n` +
                   `行程內容：${state.serviceType} (${state.airport})\n` +
                   `出發地點：${mainAddr}\n` +
@@ -602,7 +612,7 @@
           timestamp: new Date().toLocaleString('zh-TW', {hour12: false}),
           reservationId: state.reservationId,
           name: `${state.name} ${state.title}`,
-          phone: formatPhone(state.phone),
+          phone: state.phone,
           date: state.date,
           time: `${state.timeHour}:${state.timeMinute}`,
           mainAddress: mainAddr,
@@ -616,7 +626,7 @@
       try {
         await fetch(GAS_WEBAPP_URL, { method:'POST', mode:'no-cors', body: JSON.stringify(postData) });
         if (window.liff && liff.isInClient()) {
-          await liff.sendMessages([{type:'text', text:msg}, {type:'text', text: `已收到您的預約。`}]);
+          await liff.sendMessages([{type:'text', text:msg}, {type:'text', text: `已收到您的預約，請耐心等候客服確認，感謝配合。`}]);
           document.getElementById('view-form').classList.add('hidden-block');
           document.getElementById('view-done').classList.replace('hidden-block','flex');
           setTimeout(() => liff.closeWindow(), 3000);
@@ -626,7 +636,7 @@
           document.getElementById('fallback-message').innerText = msg;
         }
       } catch(err) { 
-        Swal.fire({title:'傳送失敗', text:'請稍後重試', icon:'error'}); 
+        Swal.fire({title:'傳送失敗', text:'伺服器連線異常，請稍後重試', icon:'error'}); 
         DOM.submitBtn.disabled = false; 
       }
     };
