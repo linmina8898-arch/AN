@@ -190,6 +190,7 @@
             <input type="text" id="signboardText" class="w-full mt-2 p-3 border rounded-sm outline-none focus:border-[#553f62] bg-white text-base hidden-block" placeholder="輸入舉牌內容">
           </div>
 
+          <!-- 報價單視覺區 -->
           <div class="bg-[#553f62] text-white p-6 border-t-8 border-white/20 rounded-sm shadow-xl font-mono">
             <h3 class="text-sm font-black border-b border-white/20 pb-2 mb-4 flex items-center gap-2 uppercase tracking-widest">
               <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><line x1="10" y1="9" x2="8" y2="9"/></svg> 報價明細內容
@@ -302,41 +303,39 @@
       return `AS${ds}${r}`;
     }
 
-    // 智慧比對核心逻辑
+    // 智慧型搜尋報價 logic - 深度匹配香山、頭份等變體
     function findPrice(airport, loc) {
       if (!loc || !state.priceMap || !state.priceMap.length) return null;
       
       const aptKey = airport.replace('機場','');
       // 正規化地址 (移除空格、校正錯字)
-      let normalizedUserLoc = loc.replace(/\s+/g,'').replace('苗票', '苗栗');
+      let normUserLoc = loc.replace(/\s+/g,'').replace('苗票', '苗栗');
       
-      // 提取使用者輸入中的 3 碼數字 (郵區)
-      const zipMatch = normalizedUserLoc.match(/\d{3}/);
-      const userZip = zipMatch ? zipMatch[0] : null;
-
-      // 提取核心地名 (移除常見行政字眼)
-      const coreAreaName = normalizedUserLoc.replace(/台灣|台北市|新北市|桃園市|新竹市|新竹縣|苗栗縣|台中市/g, '');
+      // 提取使用者輸入中的 3 碼郵遞區號 (如 300, 351)
+      const userZip = normUserLoc.match(/\d{3}/)?.[0];
+      
+      // 提取核心地名 (移除縣市關鍵字，只留核心行政區，如 "香山", "頭份")
+      const pureUserArea = normUserLoc.replace(/台灣|台北市|新北市|桃園市|新竹市|新竹縣|苗栗縣|台中市/g, '').replace(/區|鄉|鎮|市/g, '');
 
       let bestMatch = null;
       for (const item of state.priceMap) {
-        // 先過濾機場
-        const itemApt = String(item.a || item.a機場 || "");
+        // 先過濾機場 (A 欄)
+        const itemApt = String(item.a || item.a機場 || "").trim();
         if (!itemApt.includes(aptKey) && !aptKey.includes(itemApt)) continue;
 
-        // 讀取資料庫中的郵區 (欄位 B) 與地區 (欄位 C)
-        // 考量 GAS 可能會有的鍵值名稱 (a, b, c... 或 a機場, b郵遞區號...)
-        const itemZip = String(item.b || item.b郵遞區號 || item['b郵遞區號'] || "").trim();
-        const itemArea = String(item.c || item.c地區 || item['c地區'] || "").trim();
-        const itemAreaShort = itemArea.replace(/區|鄉|鎮|市/g, '');
+        // 讀取資料庫中的郵區 (B 欄) 與地區 (C 欄)
+        const itemZip = String(item.b || item.b郵遞區號 || "").trim();
+        const itemArea = String(item.c || item.c地區 || "").trim();
+        const itemAreaPure = itemArea.replace(/區|鄉|鎮|市/g, '');
 
-        // 1. 如果郵區完全匹配，直接回傳 (最準確)
-        if (userZip && itemZip && itemZip === userZip) return item;
+        // 策略 1：郵遞區號完全匹配 (最高優先權)
+        if (userZip && itemZip === userZip) return item;
 
-        // 2. 如果使用者地址包含資料庫完整行政區名
-        if (itemArea && normalizedUserLoc.includes(itemArea)) return item;
+        // 策略 2：資料庫地區名稱完全包含在使用者地址中 (如 "香山區" 包含在 "新竹市香山區")
+        if (itemArea && normUserLoc.includes(itemArea)) return item;
 
-        // 3. 如果核心地名包含資料庫行政區 (模糊保底)
-        if (itemAreaShort && (coreAreaName.includes(itemAreaShort) || itemAreaShort.includes(coreAreaName))) {
+        // 策略 3：核心地名匹配 (如 "香山" 匹配 "香山")
+        if (itemAreaPure && pureUserArea.includes(itemAreaPure)) {
           bestMatch = item;
         }
       }
@@ -347,7 +346,7 @@
       if (!item) return 0;
       let val = 0;
       const type = state.carType;
-      // 支援 d, e, f 或 小車, 大車, 豪華車
+      // 支援 d, e, f 或 小車, 大車, 豪華車 等多種屬性標籤
       if (type === '大車') val = item.e || item['e大車'] || item.large || 0;
       else if (type === '豪華車') val = item.f || item['f豪華車'] || item.luxury || 0;
       else val = item.d || item['d小車'] || item.small || 0;
@@ -373,6 +372,7 @@
           const c1 = state.district.replace(/\s+/g,'').match(/[\u4e00-\u9fa5]{3}/)?.[0] || "";
           const c2 = state.extraDistrict.replace(/\s+/g,'').match(/[\u4e00-\u9fa5]{3}/)?.[0] || "";
           const same = (c1 && c2 && c1.substring(0,2) === c2.substring(0,2));
+          
           const chunk = Math.max(1, Math.ceil(state.extraDistanceKm / 5));
           extraDistFee = (same ? 0 : 200) + (chunk * 100);
           label = `加點服務 (${state.extraDistanceKm.toFixed(1)}km)`;
@@ -383,12 +383,12 @@
 
       // 手續費與座椅費用
       const transFee = state.payment.includes('刷卡') ? 30 : 0;
-      const infantSeatCount = parseInt(state.infants) || 0;
+      const infantsCount = parseInt(state.infants) || 0;
 
       const fees = {
         pk: state.serviceType === '接機' ? 200 : 0,
         nt: (parseInt(state.timeHour) >= 22 || parseInt(state.timeHour) < 6) ? 200 : 0,
-        if: infantSeatCount * 200,
+        if: infantsCount * 200,
         sb: state.extraSignboard ? 200 : 0,
         ex: extraDistFee,
         tf: transFee
@@ -410,7 +410,7 @@
       DOM.feesBlock.innerHTML = '';
       if(fees.pk) DOM.feesBlock.innerHTML += `<div class="flex justify-between text-white/90 text-sm"><span>└ 接機服務費</span><span>+$200</span></div>`;
       if(fees.nt) DOM.feesBlock.innerHTML += `<div class="flex justify-between text-white/90 text-sm"><span>└ 夜間加成 (22-06)</span><span>+$200</span></div>`;
-      if(fees.if > 0) DOM.feesBlock.innerHTML += `<div class="flex justify-between text-white/90 text-sm"><span>└ 安全座椅 x${infantSeatCount}</span><span>+$${fees.if}</span></div>`;
+      if(fees.if > 0) DOM.feesBlock.innerHTML += `<div class="flex justify-between text-white/90 text-sm"><span>└ 安全座椅 x${infantsCount}</span><span>+$${fees.if}</span></div>`;
       if(fees.ex) DOM.feesBlock.innerHTML += `<div class="flex justify-between text-white/90 text-sm"><span>└ ${label}</span><span>+$${fees.ex}</span></div>`;
       if(fees.tf > 0) DOM.feesBlock.innerHTML += `<div class="flex justify-between text-white/90 text-sm"><span>└ 刷卡手續費 (街口/全支付)</span><span>+$30</span></div>`;
     }
@@ -537,7 +537,7 @@
         DOM.carType.disabled = false; 
         DOM.carTypeMsg.classList.add('hidden-block'); 
       }
-      state.infants = i;
+      state.infants = i; // 更新幼童數量 state
       calculate();
     }
     [DOM.adults, DOM.children, DOM.infants, DOM.carryOn, DOM.checkedBag].forEach(el => el.onchange = updateOptions);
