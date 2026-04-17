@@ -156,7 +156,7 @@
           
           <div class="grid grid-cols-3 gap-2 text-center text-[11px] font-bold text-gray-700">
             <div>大人<select id="adults" class="w-full p-3 border bg-white text-base"></select></div>
-            <div>小孩(4-12歲)<select id="children" class="w-full p-3 border bg-white text-base"></select></div>
+            <div>小孩(4~12歲)<select id="children" class="w-full p-3 border bg-white text-base"></select></div>
             <div>幼童(4歲下)<select id="infants" class="w-full p-3 border bg-white text-base"></select></div>
           </div>
           <div class="grid grid-cols-2 gap-2 text-center text-[11px] font-bold text-gray-700">
@@ -303,24 +303,42 @@
       return `AS${ds}${r}`;
     }
 
-    // 智慧搜尋 logic
+    // 智慧搜尋 logic (強化比對：支援 300, 351, 香山, 頭份 等各種變體)
     function findPrice(airport, loc) {
       if (!loc || !state.priceMap || !state.priceMap.length) return null;
+      
       const aptKey = airport.replace('機場','');
-      let cleanUserLoc = loc.replace(/\s+/g,'').replace('苗票', '苗栗');
-      const userZip = cleanUserLoc.match(/\d{3}/)?.[0];
-      const areaMatch = cleanUserLoc.match(/[\u4e00-\u9fa5]{2,}(區|鄉|鎮|市)/);
-      const userAreaName = areaMatch ? areaMatch[0] : "";
-      let match = null;
+      // 正規化輸入地址：移除空格、統一糾錯
+      let normalizedLoc = loc.replace(/\s+/g,'').replace('苗票', '苗栗');
+      
+      // 提取使用者輸入中的 3 碼數字 (郵區)
+      const zipMatch = normalizedLoc.match(/\d{3}/);
+      const userZip = zipMatch ? zipMatch[0] : null;
+
+      // 提取核心地名 (移除縣市字眼，僅留行政區)
+      const coreAreaName = normalizedLoc.replace(/台灣|台北市|新北市|桃園市|新竹市|新竹縣|苗栗縣|台中市/g, '');
+
+      let bestMatch = null;
       for (const item of state.priceMap) {
         const itemApt = String(item.a || item.a機場 || "");
         if (!itemApt.includes(aptKey) && !aptKey.includes(itemApt)) continue;
-        const itemZip = String(item.b || item.b郵遞區號 || "");
-        const itemArea = String(item.c || item.c地區 || "");
-        if (userZip && itemZip && itemZip === userZip) { match = item; break; }
-        if (itemArea && userAreaName && (cleanUserLoc.includes(itemArea) || itemArea.includes(userAreaName))) { match = item; break; }
+
+        const itemZip = String(item.b || item.b郵遞區號 || "").trim();
+        const itemArea = String(item.c || item.c地區 || "").trim();
+        const itemAreaShort = itemArea.replace(/區|鄉|鎮|市/g, '');
+
+        // 1. 如果有郵遞區號且完全匹配
+        if (userZip && itemZip === userZip) return item;
+
+        // 2. 如果地址字串包含完整的資料庫地區名稱 (如 "香山區")
+        if (itemArea && normalizedLoc.includes(itemArea)) return item;
+
+        // 3. 如果地址字串包含短地名 (如 "香山")
+        if (itemAreaShort && coreAreaName.includes(itemAreaShort)) {
+            bestMatch = item;
+        }
       }
-      return match;
+      return bestMatch;
     }
 
     function calculate() {
@@ -339,8 +357,10 @@
 
       const p1 = getVal(mainMatch);
       const p2 = getVal(extraMatch);
+      
+      // 加點計費基準：取兩者中報價較高者
       const base = state.hasExtraPoint ? Math.max(p1, p2) : p1;
-      const baseName = (state.hasExtraPoint && p2 > p1) ? state.extraDistrict : state.district;
+      const baseName = (state.hasExtraPoint && p2 > p1) ? (state.extraDistrict || '加點點') : (state.district || '接送點');
       
       let extraDistFee = 0;
       let label = "加點服務費";
@@ -349,6 +369,7 @@
           const c1 = state.district.replace(/\s+/g,'').match(/[\u4e00-\u9fa5]{3}/)?.[0] || "";
           const c2 = state.extraDistrict.replace(/\s+/g,'').match(/[\u4e00-\u9fa5]{3}/)?.[0] || "";
           const same = (c1 && c2 && c1.substring(0,2) === c2.substring(0,2));
+          
           const chunk = Math.max(1, Math.ceil(state.extraDistanceKm / 5));
           extraDistFee = (same ? 0 : 200) + (chunk * 100);
           label = `加點服務 (${state.extraDistanceKm.toFixed(1)}km)`;
@@ -357,7 +378,6 @@
         }
       }
 
-      // 手續費邏輯
       const transFee = state.payment.includes('刷卡') ? 30 : 0;
       const infantSeatCount = parseInt(state.infants) || 0;
 
@@ -374,9 +394,9 @@
 
       DOM.displayCarTypeName.innerText = `基本車資 (${state.carType})`;
       if (state.serviceType === '接機') {
-        DOM.displayRoute.innerText = `${state.airport} → ${baseName || '未選地區'}`;
+        DOM.displayRoute.innerText = `${state.airport} → ${baseName}`;
       } else {
-        DOM.displayRoute.innerText = `${baseName || '未選地區'} → ${state.airport}`;
+        DOM.displayRoute.innerText = `${baseName} → ${state.airport}`;
       }
       
       DOM.displayBasePrice.innerText = base ? `$${base}` : '待報價';
@@ -412,6 +432,7 @@
     async function start() {
       state.reservationId = generateId();
       DOM.displayId.innerText = state.reservationId;
+
       for(let i=0; i<24; i++) DOM.timeHour.add(new Option(String(i).padStart(2,'0'), String(i).padStart(2,'0')));
       for(let i=0; i<12; i++) DOM.timeMinute.add(new Option(String(i*5).padStart(2,'0'), String(i*5).padStart(2,'0')));
       DOM.timeHour.value = "12"; DOM.timeMinute.value = "00";
@@ -438,6 +459,7 @@
             const zip = comps.find(c=>c.types.includes('postal_code'))?.long_name || "";
             const city = comps.find(c=>c.types.includes('administrative_area_level_1'))?.long_name || "";
             const area = comps.find(c=>c.types.includes('sublocality_level_1'))?.long_name || "";
+            
             state[dId] = `${zip} ${city} ${area}`.trim().replace('苗票','苗栗');
             state[aId] = p.name || "";
             document.getElementById(dId).value = state[dId];
@@ -493,16 +515,27 @@
       };
       render(DOM.adults, 6); render(DOM.children, 6); render(DOM.infants, 6);
       render(DOM.carryOn, 6); render(DOM.checkedBag, 6);
+      
       const a = parseInt(DOM.adults.value) || 0;
       const c = parseInt(DOM.children.value) || 0;
       const i = parseInt(DOM.infants.value) || 0;
       const tp = a + c + i;
+      
       let forceLarge = false; let reason = '';
       if (tp > 4) { forceLarge = true; reason = '人數達 5 人以上強制大車'; }
       else if (tp === 4 && i > 0) { forceLarge = true; reason = '人數滿 4 人且含幼童強制大車'; }
-      if (forceLarge) { state.carType = '大車'; DOM.carType.value = '大車'; DOM.carType.disabled = true; DOM.carTypeMsg.innerText = `※ ${reason}`; DOM.carTypeMsg.classList.remove('hidden-block'); }
-      else { DOM.carType.disabled = false; DOM.carTypeMsg.classList.add('hidden-block'); }
-      state.infants = i; // 更新 state
+
+      if (forceLarge) { 
+        state.carType = '大車'; 
+        DOM.carType.value = '大車'; 
+        DOM.carType.disabled = true; 
+        DOM.carTypeMsg.innerText = `※ ${reason}`; 
+        DOM.carTypeMsg.classList.remove('hidden-block'); 
+      } else { 
+        DOM.carType.disabled = false; 
+        DOM.carTypeMsg.classList.add('hidden-block'); 
+      }
+      state.infants = i;
       calculate();
     }
     [DOM.adults, DOM.children, DOM.infants, DOM.carryOn, DOM.checkedBag].forEach(el => el.onchange = updateOptions);
