@@ -290,13 +290,10 @@
       return `AS${dateStr}${num}${str}`;
     }
 
-    // 價格提取 (處理 GAS 傳回的動態標題)
     function extractFee(item) {
       if (!item) return 0;
       let val = 0;
       const type = state.carType;
-      
-      // 依序搜尋可能包含關鍵字的屬性
       for (let key in item) {
         const k = key.toLowerCase();
         if (type === '大車' && (k === 'e' || k.includes('大車') || k === 'large')) val = item[key];
@@ -304,52 +301,37 @@
         else if (type === '小車' && (k === 'd' || k.includes('小車') || k === 'small')) val = item[key];
         if (val) break;
       }
-      
-      // 如果沒抓到屬性，嘗試保底
       if (!val) {
         if (type === '大車') val = item.e || item['e大車'] || 0;
         else if (type === '豪華車') val = item.f || item['f豪華車'] || 0;
         else val = item.d || item['d小車'] || 0;
       }
-
       return parseInt(String(val).replace(/[^\d]/g, ''), 10) || 0;
     }
 
-    // 智慧匹配報價邏輯 (地址與郵區)
     function findPriceData(airport, locString) {
       if (!locString || !state.priceMap || state.priceMap.length === 0) return null;
-      
       const aptPrefix = airport.replace('機場','');
       const cleanUser = locString.replace(/\s+/g,'').replace('台灣','');
       const userZip = cleanUser.match(/\d{3}/)?.[0] || '';
       const areaMatches = cleanUser.match(/[\u4e00-\u9fa5]{1,3}(區|鄉|鎮|市(?!區|鄉|鎮))/g);
       const userArea = areaMatches ? areaMatches[areaMatches.length - 1] : '';
-
       let bestMatch = null;
-
       for (const item of state.priceMap) {
-        // 匹配機場
         let itemApt = String(item.a || item.a機場 || item['a機場'] || item['機場'] || "");
         if (!itemApt.includes(aptPrefix) && !aptPrefix.includes(itemApt)) continue;
-
-        // 匹配地區與郵遞區號
         let itemZip = String(item.b || item.b郵遞區號 || item['b郵遞區號'] || item['郵遞區號'] || "");
         let itemAreaName = String(item.c || item.c地區 || item['c地區'] || item['地區'] || "");
         const fullItemStr = `${itemZip}${itemAreaName}`.replace(/\s+/g, '').replace('台灣','');
-
-        // 完全一致
         if (fullItemStr === cleanUser || itemAreaName === cleanUser) {
             bestMatch = item; break;
         }
-        // 郵區+行政區 吻合
         if (userArea && itemAreaName.includes(userArea) && userZip && itemZip === userZip) {
             bestMatch = item; break;
         }
-        // 行政區保底
         if (userArea && itemAreaName.includes(userArea) && !bestMatch) {
             bestMatch = item;
         }
-        // 郵區保底
         if (userZip && itemZip === userZip && !bestMatch) {
             bestMatch = item;
         }
@@ -357,23 +339,16 @@
       return bestMatch;
     }
 
-    // 計算價格總金額
     function calculatePrice() {
       const mainMatch = findPriceData(state.airport, state.district);
       const extraMatch = state.hasExtraPoint ? findPriceData(state.airport, state.extraDistrict) : null;
-      
       const p1 = extractFee(mainMatch);
       const p2 = extractFee(extraMatch);
-
-      // 加點計費規則：基本車資取兩者中較貴的
       const basePrice = (state.hasExtraPoint) ? Math.max(p1, p2) : p1;
       const baseName = (state.hasExtraPoint && p2 > p1) ? state.extraDistrict : state.district;
-      
       const h = parseInt(state.timeHour);
-      
       let extraDistFee = 0;
       let extraLabel = "加點服務費";
-      
       if (state.hasExtraPoint) {
         if (state.district && state.extraDistrict && state.extraAddress && state.address) {
           if (state.extraDistanceKm > 0) {
@@ -382,7 +357,6 @@
             const isSameCity = (city1 && city2 && city1 === city2);
             const chunks = Math.max(1, Math.ceil(state.extraDistanceKm / 5));
             const distCharge = chunks * 100;
-            
             if (isSameCity) {
               extraDistFee = distCharge;
               extraLabel = `加點服務 (同縣市 ${state.extraDistanceKm.toFixed(1)}km)`;
@@ -397,7 +371,6 @@
           extraLabel = "加點服務 (請輸入完整地址)";
         }
       }
-
       const fees = {
         pickup: state.serviceType === '接機' ? 200 : 0, 
         night: (h >= 22 || h < 6) ? 200 : 0,
@@ -405,21 +378,16 @@
         signboard: state.extraSignboard ? 200 : 0,
         extra: extraDistFee
       };
-
       const total = basePrice > 0 ? (basePrice + Object.values(fees).reduce((a, b) => a + b, 0)) : null;
-      
-      // 更新報價單顯示
       DOM.displayCarTypeName.innerText = `基本車資 (${state.carType})`;
       if (state.serviceType === '接機') {
         DOM.displayRoute.innerText = `${state.airport} → ${baseName || '未選地區'}`;
       } else {
         DOM.displayRoute.innerText = `${baseName || '未選地區'} → ${state.airport}`;
       }
-
       DOM.displayBasePrice.innerText = basePrice ? `$${basePrice}` : '待報價';
       DOM.displayTotal.innerText = total ? `$${total}` : '待報價';
       DOM.displayPayment.innerText = `付款：${state.payment}`;
-
       DOM.feesBlock.innerHTML = '';
       if(fees.pickup) DOM.feesBlock.innerHTML += `<div class="flex justify-between text-white/90 text-sm"><span>└ 接機服務費</span><span>+$200</span></div>`;
       if(fees.night) DOM.feesBlock.innerHTML += `<div class="flex justify-between text-white/90 text-sm"><span>└ 夜間加成 (22-06)</span><span>+$200</span></div>`;
@@ -428,17 +396,14 @@
       if(state.hasExtraPoint) DOM.feesBlock.innerHTML += `<div class="flex justify-between text-white/90 text-sm"><span>└ ${extraLabel}</span><span>+$${fees.extra}</span></div>`;
     }
 
-    // 更新加點間的行車距離 (Google Distance Matrix)
     function updateExtraDistance() {
       if (!state.hasExtraPoint || !state.address || !state.extraAddress || !state.district || !state.extraDistrict) {
         state.extraDistanceKm = 0;
         calculatePrice();
         return;
       }
-      
       const origin = `${state.district} ${state.address}`;
       const destination = `${state.extraDistrict} ${state.extraAddress}`;
-      
       const service = new window.google.maps.DistanceMatrixService();
       service.getDistanceMatrix({
         origins: [origin],
@@ -456,7 +421,6 @@
       });
     }
 
-    // 更新人數與行李連動防呆
     function updatePeopleLuggageOptions() {
       const a = parseInt(DOM.adults.value)||1, c = parseInt(DOM.children.value)||0, i = parseInt(DOM.infants.value)||0;
       renderSelectOptions(DOM.adults, c+i, 6, true);
@@ -465,19 +429,16 @@
       state.adults = parseInt(DOM.adults.value);
       state.children = parseInt(DOM.children.value);
       state.infants = parseInt(DOM.infants.value);
-
       const co = parseInt(DOM.carryOn.value)||0, cb = parseInt(DOM.checkedBag.value)||0;
       renderSelectOptions(DOM.carryOn, cb, 6, false);
       renderSelectOptions(DOM.checkedBag, co, 6, false);
       state.carryOn = parseInt(DOM.carryOn.value);
       state.checkedBag = parseInt(DOM.checkedBag.value);
-
       const totalP = state.adults + state.children + state.infants;
       let forced = false, reason = '';
       if (totalP >= 5) { forced = true; reason = '人數達 5 人以上'; }
       else if (state.checkedBag >= 3) { forced = true; reason = '託運行李達 3 件以上'; }
       else if (state.checkedBag === 2 && state.carryOn >= 1) { forced = true; reason = '2託運+1登機需大車'; }
-
       if (forced) {
         state.carType = '大車'; DOM.carType.value = '大車'; DOM.carType.disabled = true;
         DOM.carTypeMsg.innerText = `※ 因 ${reason}，系統已強制改為大車。`; DOM.carTypeMsg.classList.remove('hidden-block');
@@ -497,8 +458,6 @@
       else element.value = '0';
     }
 
-    // --- 初始化功能 ---
-
     function initGoogleMaps() {
       const parsePlace = (place, dId, aId) => {
         const comps = place.address_components || [];
@@ -506,8 +465,6 @@
         let zip = (comps.find(c=>c.types.includes('postal_code'))?.long_name || "").substring(0,3);
         let city = (comps.find(c=>c.types.includes('administrative_area_level_1'))?.long_name || "").replace('台灣','').trim();
         let area = (comps.find(c=>c.types.includes('sublocality_level_1')) || comps.find(c=>c.types.includes('locality')))?.long_name || "";
-        
-        // 新竹特定區塊郵遞區號修正規則
         if (full.includes("香山")) { zip = "300"; city = "新竹市"; area = "香山區"; }
         else if (full.includes("北區") && (full.includes("新竹") || city.includes("新竹"))) { zip = "300"; city = "新竹市"; area = "北區"; }
         else if (full.includes("東區") && (full.includes("新竹") || city.includes("新竹"))) { zip = "300"; city = "新竹市"; area = "東區"; }
@@ -515,29 +472,23 @@
         else if (full.includes("竹北")) { zip = "302"; city = "新竹縣"; area = "竹北市"; }
         else if (full.includes("竹東")) { zip = "310"; city = "新竹縣"; area = "竹東鎮"; }
         else if (full.includes("芎林")) { zip = "307"; city = "新竹縣"; area = "芎林鄉"; }
-
         const distStr = `${zip} ${city} ${area}`.trim();
         const addrStr = full.replace(/^\d{3,5}/, '').trim(); 
-
         document.getElementById(dId).value = distStr;
         document.getElementById(aId).value = addrStr;
         state[dId] = distStr; state[aId] = addrStr;
-        
         updateExtraDistance();
       };
-
       const initAC = (inputId, dId) => {
         const input = document.getElementById(inputId);
         const ac = new window.google.maps.places.Autocomplete(input, { 
-          types:['geocode','establishment'], 
-          componentRestrictions:{country:'tw'} 
+          types:['geocode','establishment'], componentRestrictions:{country:'tw'} 
         });
         ac.addListener('place_changed', () => {
           const place = ac.getPlace();
           if (place && place.formatted_address) parsePlace(place, dId, inputId);
         });
       };
-
       if (!window.google) {
         const s = document.createElement('script');
         s.src = `https://maps.googleapis.com/maps/api/js?key=${GOOGLE_MAPS_API_KEY}&libraries=places&language=zh-TW`;
@@ -615,45 +566,36 @@
       return true;
     }
 
-    // --- 程式執行起點 ---
+    // --- 執行起點 ---
 
     state.reservationId = generateReservationId();
     DOM.displayId.innerText = state.reservationId;
-    
-    // 初始化時間下拉選單
     for(let i=0; i<24; i++) DOM.timeHour.add(new Option(i.toString().padStart(2,'0')));
     for(let i=0; i<12; i++) DOM.timeMinute.add(new Option((i*5).toString().padStart(2,'0')));
     DOM.timeHour.value = '12';
     DOM.timeMinute.value = '00';
-
     updatePeopleLuggageOptions();
     loadPrices();
     initGoogleMaps();
     initLiff();
     
-    // 綁定所有事件監聽
     document.getElementById('phone').oninput = (e) => {
       let val = e.target.value.replace(/\D/g, '').slice(0, 10);
       let formatted = val.length > 7 ? `${val.slice(0, 4)}-${val.slice(4, 7)}-${val.slice(7)}` : (val.length > 4 ? `${val.slice(0, 4)}-${val.slice(4)}` : val);
       e.target.value = formatted;
       state.phone = formatted;
     };
-    
     ['name','email','flightNumber','signboardText','userRemarks'].forEach(id => {
       const el = document.getElementById(id);
       if(el) el.addEventListener('input', (e) => state[id] = e.target.value);
     });
-
     ['address', 'extraAddress'].forEach(id => {
       const el = document.getElementById(id);
       if(el) {
         el.addEventListener('input', (e) => state[id] = e.target.value);
-        el.addEventListener('blur', () => {
-          if (typeof updateExtraDistance === 'function') updateExtraDistance();
-        });
+        el.addEventListener('blur', () => { if (typeof updateExtraDistance === 'function') updateExtraDistance(); });
       }
     });
-    
     ['timeHour','timeMinute','serviceType','airport','carType','payment'].forEach(id => {
       document.getElementById(id).addEventListener('change', (e) => { 
         state[id] = e.target.value; 
@@ -661,29 +603,24 @@
         calculatePrice(); 
       });
     });
-    
     ['adults','children','infants','carryOn','checkedBag'].forEach(id => {
       document.getElementById(id).addEventListener('change', updatePeopleLuggageOptions);
     });
-    
     DOM.hasExtraPoint.addEventListener('change', (e) => {
       state.hasExtraPoint = e.target.checked;
       DOM.extraPointBlock.className = e.target.checked ? 'mt-4 space-y-2' : 'hidden-block';
       updateExtraDistance();
     });
-    
     DOM.extraSignboard.addEventListener('change', (e) => {
       state.extraSignboard = e.target.checked;
       DOM.signboardText.className = e.target.checked ? 'w-full mt-2 p-3 border rounded-sm outline-none focus:border-[#553f62] bg-white text-base' : 'hidden-block';
       calculatePrice();
     });
-    
     DOM.date.addEventListener('change', (e) => {
       state.date = e.target.value;
       check24HoursLimit();
     });
 
-    // 表單提交
     document.getElementById('reservation-form').onsubmit = async (e) => {
       e.preventDefault();
       if (!state.name.trim()) return showAlert('請輸入乘車人姓名', '提示', 'error');
@@ -692,10 +629,8 @@
       if (!state.district) return showAlert('請透過地圖建議選單選取接送地址', '地址錯誤', 'error');
       if (!state.date) return showAlert('請選擇乘車日期', '提示', 'error');
       if (!state.flightNumber.trim()) return showAlert('請填寫航班編號', '提示', 'error');
-      
       if (state.hasExtraPoint && !state.extraAddress.trim()) return showAlert('請填寫加點詳細地址', '提示', 'error');
       if (state.extraSignboard && !state.signboardText.trim()) return showAlert('請填寫舉牌內容', '提示', 'error');
-
       if (!check24HoursLimit()) return;
       if (!document.getElementById('agreed').checked) return showAlert('請勾選同意條款', '提醒');
 
@@ -729,7 +664,7 @@
       lineText += `行李：登機箱${state.carryOn},託運${state.checkedBag}\n` +
                   `總額：${totalStr} (${state.payment})`;
 
-      const secondMessage = `✅ 感謝您的線上預約！\n客服人員將盡快聯繫您確認細節。`;
+      const secondMessage = `您的預約已成功送出。\n請您耐心等候，待客服人員為您確認訂單內容無誤後，將回傳轉帳帳號／刷卡QR Code以利完成付款，感謝您的配合。`;
 
       const payload = { 
         action:'addReservation', 
@@ -754,7 +689,7 @@
           await window.liff.sendMessages([{ type:'text', text:lineText }, { type:'text', text:secondMessage }]);
           document.getElementById('view-form').classList.add('hidden-block');
           document.getElementById('view-done').classList.replace('hidden-block','flex');
-          setTimeout(()=>window.liff.closeWindow(), 2000);
+          setTimeout(()=>window.liff.closeWindow(), 3000);
         } else {
           document.getElementById('view-form').classList.add('hidden-block');
           document.getElementById('view-success').classList.remove('hidden-block');
