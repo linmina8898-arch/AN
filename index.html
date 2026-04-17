@@ -27,7 +27,8 @@
   <div id="view-done" class="hidden-block min-h-screen bg-[#553f62] flex-col items-center justify-center text-white text-center p-6">
      <svg class="w-20 h-20 mb-4 animate-pulse mx-auto" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
      <h2 class="text-2xl font-black tracking-widest">預約已送出</h2>
-     <p class="mt-4 font-bold opacity-90">正在為您返回 LINE 聊天室...</p>
+     <p class="mt-4 font-bold opacity-90">正在發送預約明細至 LINE 聊天室...</p>
+     <p class="mt-2 text-xs opacity-70">完成後將自動關閉視窗</p>
   </div>
 
   <!-- 外部瀏覽器顯示的完成畫面 -->
@@ -36,10 +37,20 @@
       <h1 class="text-xl font-bold tracking-wider uppercase">預約完成</h1>
     </header>
     <main class="max-w-md w-full mx-auto mt-8 p-6 text-center">
-      <div class="bg-white p-8 rounded-lg shadow-xl border border-gray-100">
-        <svg class="w-20 h-20 text-[#553f62] mx-auto mb-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
-        <h2 class="text-2xl font-black text-[#553f62] mb-2">預約資料已送出</h2>
-        <div id="fallback-message" class="text-left bg-[#e9e7ef] border border-gray-200 p-4 rounded-md text-[13px] text-gray-700 font-mono whitespace-pre-wrap overflow-y-auto max-h-[40vh] mt-4"></div>
+      <div class="bg-white p-8 rounded-lg shadow-xl border border-gray-100 text-left">
+        <svg class="w-16 h-16 text-green-500 mx-auto mb-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+        <h2 class="text-2xl font-black text-[#553f62] mb-4 text-center">預約資料已成功送出</h2>
+        
+        <div class="space-y-4">
+          <div class="bg-gray-50 p-4 rounded border border-gray-200">
+            <p class="text-sm font-bold text-gray-800 leading-relaxed">您的預約已成功送出。請您耐心等候，待客服人員為您確認訂單內容無誤後，將回傳轉帳帳號／刷卡QR Code以利完成付款，感謝您的配合。</p>
+          </div>
+          
+          <div class="relative">
+            <span class="absolute -top-3 left-3 bg-white px-2 text-[10px] font-bold text-gray-400">預約明細備份</span>
+            <div id="fallback-message" class="bg-[#e9e7ef] border border-gray-200 p-4 rounded-md text-[13px] text-gray-700 font-mono whitespace-pre-wrap overflow-y-auto max-h-[40vh]"></div>
+          </div>
+        </div>
       </div>
     </main>
   </div>
@@ -278,7 +289,7 @@
       submitBtn: document.getElementById('submit-btn')
     };
 
-    // --- 核心邏輯函數 ---
+    // --- 功能函數 ---
 
     function generateReservationId() {
       const now = new Date();
@@ -635,6 +646,7 @@
       if (!document.getElementById('agreed').checked) return showAlert('請勾選同意條款', '提醒');
 
       state.isSubmitting = true; 
+      DOM.submitBtn.disabled = true;
       DOM.submitBtn.innerText = '資料傳送中...';
       const totalStr = DOM.displayTotal.innerText;
       
@@ -684,20 +696,45 @@
       };
 
       try {
-        fetch(GAS_WEBAPP_URL, { method:'POST', mode:'no-cors', body:JSON.stringify(payload) }).catch(()=>{});
-        if (window.liff.isInClient()) {
-          await window.liff.sendMessages([{ type:'text', text:lineText }, { type:'text', text:secondMessage }]);
-          document.getElementById('view-form').classList.add('hidden-block');
-          document.getElementById('view-done').classList.replace('hidden-block','flex');
-          setTimeout(()=>window.liff.closeWindow(), 3000);
+        // 先將資料傳送到 GAS
+        await fetch(GAS_WEBAPP_URL, { method:'POST', mode:'no-cors', body:JSON.stringify(payload) });
+
+        // 如果在 LINE 內部執行
+        if (window.liff && window.liff.isInClient()) {
+          // 確保已登入
+          if (!window.liff.isLoggedIn()) {
+             window.liff.login();
+             return;
+          }
+          
+          // 檢查是否有傳送訊息權限並發送
+          window.liff.sendMessages([
+            { type:'text', text:lineText },
+            { type:'text', text:secondMessage }
+          ]).then(() => {
+            document.getElementById('view-form').classList.add('hidden-block');
+            document.getElementById('view-done').classList.replace('hidden-block','flex');
+            // 延遲關閉視窗，確保訊息發送成功
+            setTimeout(() => window.liff.closeWindow(), 3500);
+          }).catch((err) => {
+            console.error('LINE訊息發送失敗', err);
+            // 如果 sendMessages 權限不足，引導顯示成功畫面
+            document.getElementById('view-form').classList.add('hidden-block');
+            document.getElementById('view-success').classList.remove('hidden-block');
+            document.getElementById('fallback-message').innerText = lineText + '\n\n' + secondMessage;
+            showAlert('預約已送出，但訊息回傳失敗。請確認已開啟 LINE 聊天傳送權限。', '通知');
+          });
         } else {
+          // 外部瀏覽器邏輯
           document.getElementById('view-form').classList.add('hidden-block');
           document.getElementById('view-success').classList.remove('hidden-block');
           document.getElementById('fallback-message').innerText = lineText + '\n\n' + secondMessage;
         }
       } catch(err) { 
-        showAlert('傳送失敗，請檢查網路。','錯誤','error'); 
+        console.error('傳送發生錯誤', err);
+        showAlert('資料傳送失敗，請檢查網路連接後再試一次。','錯誤','error'); 
         state.isSubmitting=false; 
+        DOM.submitBtn.disabled = false;
         DOM.submitBtn.innerText='確認預約並送出'; 
       }
     };
