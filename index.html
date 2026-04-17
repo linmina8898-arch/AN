@@ -277,16 +277,15 @@
       signboardText: document.getElementById('signboardText')
     };
 
-    /* 強制清除所有「台灣」字眼，徹底乾淨 */
+    /* 強制清除所有「台灣」字眼 */
     function cleanAll(str) {
       if (!str) return "";
       return str.replace(/台灣|臺灣/g, '').trim();
     }
 
-    /* 提取地名核心字眼 (如: 新北市板橋區 -> 板橋) */
+    /* 提取核心字眼 */
     function getCore(str) {
       if (!str) return "";
-      // 先清掉台灣，再清掉所有行政單位後綴
       let s = cleanAll(str).replace(/\d+/g, '');
       return s.replace(/市|縣|區|鄉|鎮/g, '').trim();
     }
@@ -295,6 +294,33 @@
       const d = new Date();
       const random = Math.random().toString(36).substring(2, 5).toUpperCase();
       return `AS${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}${random}`;
+    }
+
+    /* 24小時預約須知彈窗 */
+    function showNotice() {
+      const hasSeenNotice = sessionStorage.getItem('hasSeenNotice');
+      if (!hasSeenNotice) {
+        Swal.fire({
+          title: '專車預約須知',
+          html: `
+            <div style="color: #202020; font-size: 15px; line-height: 1.6; text-align: left; margin-top: 10px;">
+              為確保行程順利，線上預約需於出發時間前 <strong>24 小時</strong> 完成。<br><br>
+              <span style="color: #f07cad; font-weight: bold;">【急單處理】</span><br>
+              24 小時內之需求請直撥：<br>
+              <div style="text-align: center; margin-top: 15px;">
+                <a href="tel:0955311306" style="color: #553f62; font-size: 22px; font-weight: bold; text-decoration: none; display: inline-block; padding: 5px 25px; border: 2px solid #553f62; border-radius: 25px;">0955-311-306</a>
+              </div>
+            </div>
+          `,
+          icon: 'info',
+          confirmButtonText: '我已了解',
+          confirmButtonColor: '#553f62',
+          customClass: { popup: 'swal-custom-radius' },
+          allowOutsideClick: false
+        }).then((result) => {
+          if (result.isConfirmed) sessionStorage.setItem('hasSeenNotice', 'true');
+        });
+      }
     }
 
     /* 積分權重匹配演算法 - 解決行政區層級衝突 */
@@ -317,23 +343,20 @@
         
         let score = 0;
         
-        // 1. 郵遞區號命中 (基礎分)
+        // 1. 郵遞區號命中 (+100)
         if (userZip && itemZip === userZip) score += 100;
         
-        // 2. 核心地名精準匹配 (核心權重：解決香山、板橋等特殊區)
-        if (userCore && itemCore && (userCore === itemCore)) {
-          score += 500;
-        }
+        // 2. 核心地名精準匹配 (+500)
+        if (userCore && itemCore && (userCore === itemCore)) score += 500;
         
-        // 3. 包含關係 (模糊匹配加成)
-        if (userFull.includes(itemFull)) score += 20 + itemFull.length;
-        if (itemFull.includes(userFull)) score += 10 + userFull.length;
+        // 3. 包含關係 (模糊匹配)
+        if (userFull.includes(itemFull)) score += (20 + itemFull.length);
+        if (itemFull.includes(userFull)) score += (10 + userFull.length);
 
         return { key: k, score };
       }).filter(x => x.score > 0);
 
       if (candidates.length > 0) {
-        // 分數越高越精確，優先選取
         candidates.sort((a, b) => b.score - a.score); 
         return state.priceMap[candidates[0].key];
       }
@@ -360,8 +383,7 @@
       if (state.hasExtraPoint && state.extraDistanceKm > 0) {
         const c1 = getCore(state.district);
         const c2 = getCore(state.extraDistrict);
-        const sameCity = (c1 === c2);
-        extraDistFee = (sameCity ? 0 : 200) + (Math.max(1, Math.ceil(state.extraDistanceKm / 5)) * 100);
+        extraDistFee = (c1 === c2 ? 0 : 200) + (Math.max(1, Math.ceil(state.extraDistanceKm / 5)) * 100);
       }
 
       const fees = {
@@ -417,7 +439,6 @@
         let city = cleanAll(comps.find(c=>c.types.includes('administrative_area_level_1'))?.long_name || "");
         let area = (comps.find(c=>c.types.includes('sublocality_level_1')) || comps.find(c=>c.types.includes('locality')))?.long_name || "";
         
-        // 特殊修正：香山區強迫回歸 300
         if (full.includes("香山")) { zip="300"; city="新竹市"; area="香山區"; }
         
         state[dId] = `${zip} ${city} ${area}`.trim();
@@ -464,6 +485,8 @@
       for(let i=0; i<24; i++) DOM.timeHour.add(new Option(String(i).padStart(2,'0'), String(i).padStart(2,'0')));
       for(let i=0; i<60; i+=5) DOM.timeMinute.add(new Option(String(i).padStart(2,'0'), String(i).padStart(2,'0')));
       DOM.timeHour.value = "12"; DOM.timeMinute.value = "00";
+      
+      showNotice(); // 確保找回提醒
       loadPrices();
       initGoogleMaps();
       if(typeof liff !== 'undefined') {
@@ -541,7 +564,7 @@
     document.getElementById('reservation-form').onsubmit = async (e) => {
       e.preventDefault();
       if (!state.name || state.phone.length < 10 || !state.district) {
-        return Swal.fire({title:'資訊不完整', text:'請填寫姓名、電話並從選單選取正確地址', icon:'error'});
+        return Swal.fire({title:'資訊不完整', text:'請填寫姓名、電話並選取正確地址', icon:'error'});
       }
       if (!document.getElementById('agreed').checked) {
         return Swal.fire({title:'提醒', text:'請勾選同意條款', icon:'info'});
