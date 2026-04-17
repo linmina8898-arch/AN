@@ -330,19 +330,19 @@
       return `AS${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}${random}`;
     }
 
-    /* 報價邏輯優化：加強地名核心字眼比對 */
+    /* 報價邏輯優化：移除「台灣」並針對新北/桃園加強匹配 */
     function findPriceData(airport, locString) {
       if (!locString || Object.keys(state.priceMap).length === 0) return null;
       const aptPrefix = airport.replace('機場','');
       
-      // 標準化使用者輸入：移除空格、移除台灣，處理常見錯字
-      const userNorm = locString.replace(/\s+/g,'').replace('台灣','').replace('苗票', '苗栗');
+      // 標準化使用者輸入：移除空格、移除「台灣」，處理常見錯字
+      const userNorm = locString.replace(/\s+/g,'').replace(/台灣|臺灣/g,'').replace('苗票', '苗栗');
       
-      // 提取郵遞區號 (Google 通常會放在 district 開頭)
+      // 提取郵遞區號
       const zipMatch = userNorm.match(/^(\d{3})/);
       const userZip = zipMatch ? zipMatch[1] : '';
 
-      // 提取核心地段 (去掉市/區/鄉/鎮等後綴，只留如「板橋」、「中壢」)
+      // 提取核心地段 (去掉市/區/鄉/鎮等後綴，只留如「板橋」、「大園」)
       const cleanUserLoc = userNorm.replace(/\d+/g, '').replace(/市|縣|區|鄉|鎮/g, '');
 
       const available = Object.keys(state.priceMap).filter(k => {
@@ -350,7 +350,7 @@
         return apt.includes(aptPrefix) || aptPrefix.includes(apt);
       }).map(k => {
         const item = state.priceMap[k];
-        const itemLoc = (k.split('_')[1] || '').replace(/\s+/g,'').replace('台灣','');
+        const itemLoc = (k.split('_')[1] || '').replace(/\s+/g,'').replace(/台灣|臺灣/g,'');
         const cleanItemLoc = itemLoc.replace(/\d+/g, '').replace(/市|縣|區|鄉|鎮/g, '');
         const itemZip = item.b || itemLoc.match(/\d{3}/)?.[0] || '';
         
@@ -375,7 +375,6 @@
       }).filter(x => x.score > 0);
 
       if (available.length > 0) {
-        // 取分數最高者，分數相同則取字數較長者 (較精確)
         available.sort((a, b) => b.score - a.score || b.key.length - a.key.length); 
         return state.priceMap[available[0].key];
       }
@@ -429,7 +428,7 @@
       const totalStr = totalValue ? `$${totalValue}` : '待報價';
 
       document.getElementById('display-carType-name').innerText = `基本車資 (${state.carType.split(' ')[0]})`;
-      document.getElementById('display-route').innerText = `${matchedName || '未選地區'} ↔ ${state.airport}`;
+      document.getElementById('display-route').innerText = `${matchedName.replace(/台灣|臺灣/g,'') || '未選地區'} ↔ ${state.airport}`;
       DOM.displayBasePrice.innerText = base ? `$${base}` : '待報價';
       DOM.displayTotal.innerText = totalStr;
       DOM.displayPaymentInfo.innerText = `付款方式：${state.payment.split('(')[0]}`;
@@ -469,19 +468,19 @@
     function initGoogleMaps() {
       const parse = (place, dId, aId) => {
         const comps = place.address_components || [];
-        const full = (place.formatted_address || "").replace('台灣','').trim();
+        const full = (place.formatted_address || "").replace(/台灣|臺灣/g,'').trim();
         let zip = (comps.find(c=>c.types.includes('postal_code'))?.long_name || "").substring(0,3);
-        let city = (comps.find(c=>c.types.includes('administrative_area_level_1'))?.long_name || "").replace('台灣','').trim();
+        let city = (comps.find(c=>c.types.includes('administrative_area_level_1'))?.long_name || "").replace(/台灣|臺灣/g,'').trim();
         let area = (comps.find(c=>c.types.includes('sublocality_level_1')) || comps.find(c=>c.types.includes('locality')))?.long_name || "";
         
-        // 特殊區域校正：加強新竹/苗栗/桃園的精確度
+        // 特殊區域校正
         if (full.includes("香山")) { zip="300"; city="新竹市"; area="香山區"; }
         else if (full.includes("北區") && (full.includes("新竹") || city.includes("新竹"))) { zip="300"; city="新竹市"; area="北區"; }
         else if (full.includes("東區") && (full.includes("新竹") || city.includes("新竹"))) { zip="300"; city="新竹市"; area="東區"; }
         else if (full.includes("頭份")) { zip="351"; city="苗栗縣"; area="頭份市"; }
 
-        state[dId] = `${zip} ${city} ${area}`.trim();
-        state[aId] = place.name || "";
+        state[dId] = `${zip} ${city} ${area}`.trim().replace(/台灣|臺灣/g,'');
+        state[aId] = (place.name || "").replace(/台灣|臺灣/g,'');
         document.getElementById(dId).value = state[dId];
         calculatePrice();
         updateExtraDistance();
@@ -696,6 +695,9 @@
       if(state.boosterSeat > 0) seatMsg.push(`增高墊x${state.boosterSeat}`);
       const seatStr = seatMsg.length > 0 ? seatMsg.join(', ') : '無';
 
+      const mainAddr = `${state.district} ${state.address}`.replace(/台灣|臺灣/g,'');
+      const extraAddr = state.hasExtraPoint ? `${state.extraDistrict} ${state.extraAddress}`.replace(/台灣|臺灣/g,'') : '無';
+
       const msg = `【安星租車 預約成功】\n` +
                   `預約編號：${state.reservationId}\n` +
                   `乘車人：${state.name} ${state.title}\n` +
@@ -703,8 +705,8 @@
                   `乘車日期：${state.date} ${formattedTime}\n` +
                   `行程內容：${state.serviceType} (${state.airport})\n` +
                   `航班編號：${state.flightNumber || '無'}\n` +
-                  `出發地點：${state.district} ${state.address}\n` +
-                  `加點地址：${state.hasExtraPoint ? (state.extraDistrict + ' ' + state.extraAddress) : '無'}\n` +
+                  `出發地點：${mainAddr}\n` +
+                  `加點地址：${extraAddr}\n` +
                   `預約車型：${state.carType}\n` +
                   `乘客人數：${state.adults}大 / ${state.children}中 / ${state.infants}小\n` +
                   `兒童設備：${seatStr}\n` +
@@ -727,9 +729,9 @@
           serviceType: state.serviceType,
           airport: state.airport,
           flightNumber: state.flightNumber || '無',
-          mainAddress: `${state.district} ${state.address}`,
+          mainAddress: mainAddr,
           hasExtraPoint: state.hasExtraPoint ? '是' : '否',
-          extraAddress: state.hasExtraPoint ? `${state.extraDistrict} ${state.extraAddress}` : '無',
+          extraAddress: extraAddr,
           carType: state.carType,
           passengers: `${state.adults}大 ${state.children}中 ${state.infants}小 (設備:${seatStr})`,
           luggage: `${state.carryOn}登 ${state.checkedBag}託`,
