@@ -24,7 +24,7 @@
 </head>
 <body class="bg-[#e9e7ef] text-black font-sans">
   
-  <!-- 送出後的成功畫面 -->
+  <!-- 送出後的成功畫面 (LINE 內部) -->
   <div id="view-done" class="hidden-block min-h-screen bg-[#553f62] flex-col items-center justify-center text-white text-center p-6">
      <svg class="w-20 h-20 mb-4 animate-pulse mx-auto" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
      <h2 class="text-2xl font-black tracking-widest">預約已送出</h2>
@@ -116,7 +116,7 @@
           </div>
         </section>
 
-        <!-- 乘車資訊 -->
+        <!-- 乘車日期/時間/機場 -->
         <section class="space-y-4">
           <h2 class="text-lg font-bold border-b-2 border-[#553f62] pb-2 flex items-center gap-2 mt-8 text-[#553f62]">
             <svg class="w-5 h-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg> 乘車資訊
@@ -141,7 +141,7 @@
           <input type="text" id="flightNumber" class="w-full p-3 border uppercase font-mono rounded-sm outline-none focus:border-[#553f62] bg-white text-base" placeholder="航班編號 EX: BR123">
         </section>
 
-        <!-- 車型、人數與行李 -->
+        <!-- 車型與人數行李 -->
         <section class="space-y-4">
           <h2 class="text-lg font-bold border-b-2 border-[#553f62] pb-2 flex items-start gap-2 mt-8 text-[#553f62]">
             <svg class="w-5 h-5 shrink-0 mt-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 16H9m10 0h3v-3.15a1 1 0 0 0-.84-.99L16 11l-2.7-3.6a2 2 0 0 0-1.6-.8H8.3a2 2 0 0 0-1.6.8L4 11l-5.16.86a1 1 0 0 0-.84.99V16h3m10 0a2 2 0 1 0-4 0m-6 0a2 2 0 1 0-4 0"/></svg>
@@ -156,7 +156,7 @@
           
           <div class="grid grid-cols-3 gap-2 text-center text-[11px] font-bold text-gray-700">
             <div>大人<select id="adults" class="w-full p-3 border bg-white text-base"></select></div>
-            <div>小孩(4~12歲)<select id="children" class="w-full p-3 border bg-white text-base"></select></div>
+            <div>小孩(4-12歲)<select id="children" class="w-full p-3 border bg-white text-base"></select></div>
             <div>幼童(4歲下)<select id="infants" class="w-full p-3 border bg-white text-base"></select></div>
           </div>
           <div class="grid grid-cols-2 gap-2 text-center text-[11px] font-bold text-gray-700">
@@ -170,11 +170,19 @@
           <h2 class="text-lg font-bold border-b-2 border-[#553f62] pb-2 flex items-center gap-2 mt-8 text-[#553f62]">
             <svg class="w-5 h-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg> 費用報價
           </h2>
-          <select id="payment" class="w-full p-3 border font-bold rounded-sm outline-none focus:border-[#553f62] bg-white text-base">
-            <option value="首次預約(需轉帳)">首次預約需轉帳付款</option>
-            <option value="街口/全支付刷卡(+$30)">街口/全支付刷卡+$30</option>
-            <option value="現金">現金</option>
-          </select>
+          
+          <div class="space-y-1">
+            <label class="block text-sm font-bold text-gray-700 flex justify-between items-center">
+              <span>付款方式</span>
+              <span class="text-red-500 text-[10px] font-bold">※首次預約僅能使用轉帳/刷卡</span>
+            </label>
+            <select id="payment" class="w-full p-3 border font-bold rounded-sm outline-none focus:border-[#553f62] bg-white text-base">
+              <option value="轉帳">轉帳</option>
+              <option value="現金">現金</option>
+              <option value="街口/全支付刷卡(+$30)">街口/全支付刷卡 +$30</option>
+            </select>
+          </div>
+
           <div class="p-3 border rounded-sm">
             <label class="flex items-center gap-2 cursor-pointer py-1 font-bold text-gray-700">
               <input type="checkbox" id="extraSignboard" class="w-5 h-5 accent-[#553f62]"> 舉牌服務 (+$200)
@@ -182,6 +190,7 @@
             <input type="text" id="signboardText" class="w-full mt-2 p-3 border rounded-sm outline-none focus:border-[#553f62] bg-white text-base hidden-block" placeholder="輸入舉牌內容">
           </div>
 
+          <!-- 報價單視覺區 -->
           <div class="bg-[#553f62] text-white p-6 border-t-8 border-white/20 rounded-sm shadow-xl font-mono">
             <h3 class="text-sm font-black border-b border-white/20 pb-2 mb-4 flex items-center gap-2 uppercase tracking-widest">
               <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><line x1="10" y1="9" x2="8" y2="9"/></svg> 報價明細內容
@@ -199,7 +208,7 @@
                 <span class="font-black text-white text-lg">預估總額</span>
                 <div class="text-right">
                   <span id="display-total" class="text-4xl font-black text-white">待報價</span>
-                  <div id="display-payment" class="text-xs text-white/70 mt-1 uppercase tracking-tighter text-right">付款：待選</div>
+                  <div id="display-payment" class="text-xs text-white/70 mt-1 uppercase tracking-tighter text-right">付款：轉帳</div>
                 </div>
               </div>
             </div>
@@ -255,7 +264,7 @@
       date: '', timeHour: '12', timeMinute: '00',
       serviceType: '送機', airport: '桃園機場', flightNumber: '',
       carType: '小車', adults: 1, children: 0, infants: 0, carryOn: 0, checkedBag: 0,
-      payment: '首次預約(需轉帳)', extraSignboard: false, signboardText: '', userRemarks: '', agreed: false,
+      payment: '轉帳', extraSignboard: false, signboardText: '', userRemarks: '', agreed: false,
       priceMap: []
     };
 
@@ -282,11 +291,11 @@
       displayTotal: document.getElementById('display-total'),
       displayPayment: document.getElementById('display-payment'),
       feesBlock: document.getElementById('fees-block'),
-      submitBtn: document.getElementById('submit-btn')
+      submitBtn: document.getElementById('submit-btn'),
+      payment: document.getElementById('payment')
     };
 
-    // --- 功能函數 ---
-
+    // --- 初始化輔助 ---
     function generateId() {
       const d = new Date();
       const ds = `${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}`;
@@ -294,39 +303,22 @@
       return `AS${ds}${r}`;
     }
 
-    // 智慧型搜尋報價 logic
+    // 智慧搜尋 logic
     function findPrice(airport, loc) {
       if (!loc || !state.priceMap || !state.priceMap.length) return null;
-      
       const aptKey = airport.replace('機場','');
-      // 自動校正常見地址錯誤 (苗票 -> 苗栗)
       let cleanUserLoc = loc.replace(/\s+/g,'').replace('苗票', '苗栗');
-      
-      // 提取使用者輸入中的 3 碼郵遞區號
       const userZip = cleanUserLoc.match(/\d{3}/)?.[0];
-      // 提取使用者輸入中的行政區關鍵字 (例如: 頭份市)
       const areaMatch = cleanUserLoc.match(/[\u4e00-\u9fa5]{2,}(區|鄉|鎮|市)/);
       const userAreaName = areaMatch ? areaMatch[0] : "";
-
       let match = null;
       for (const item of state.priceMap) {
         const itemApt = String(item.a || item.a機場 || "");
         if (!itemApt.includes(aptKey) && !aptKey.includes(itemApt)) continue;
-
         const itemZip = String(item.b || item.b郵遞區號 || "");
         const itemArea = String(item.c || item.c地區 || "");
-        
-        // 1. 優先比對郵遞區號 (最精準)
-        if (userZip && itemZip && itemZip === userZip) {
-          match = item; break;
-        }
-        
-        // 2. 模糊比對行政區名稱 (資料庫中含有使用者輸入的地區名稱)
-        if (itemArea && userAreaName) {
-          if (cleanUserLoc.includes(itemArea) || itemArea.includes(userAreaName)) {
-            match = item; break;
-          }
-        }
+        if (userZip && itemZip && itemZip === userZip) { match = item; break; }
+        if (itemArea && userAreaName && (cleanUserLoc.includes(itemArea) || itemArea.includes(userAreaName))) { match = item; break; }
       }
       return match;
     }
@@ -338,16 +330,15 @@
       const getVal = (d) => {
         if (!d) return 0;
         let v = 0;
-        if (state.carType === '大車') v = d.e || d['e大車'] || 0;
-        else if (state.carType === '豪華車') v = d.f || d['f豪華車'] || 0;
+        const type = state.carType;
+        if (type === '大車') v = d.e || d['e大車'] || 0;
+        else if (type === '豪華車') v = d.f || d['f豪華車'] || 0;
         else v = d.d || d['d小車'] || 0;
         return parseInt(String(v).replace(/[^\d]/g, ''), 10) || 0;
       };
 
       const p1 = getVal(mainMatch);
       const p2 = getVal(extraMatch);
-      
-      // 加點計費基準：取兩者中報價較高者
       const base = state.hasExtraPoint ? Math.max(p1, p2) : p1;
       const baseName = (state.hasExtraPoint && p2 > p1) ? state.extraDistrict : state.district;
       
@@ -358,7 +349,6 @@
           const c1 = state.district.replace(/\s+/g,'').match(/[\u4e00-\u9fa5]{3}/)?.[0] || "";
           const c2 = state.extraDistrict.replace(/\s+/g,'').match(/[\u4e00-\u9fa5]{3}/)?.[0] || "";
           const same = (c1 && c2 && c1.substring(0,2) === c2.substring(0,2));
-          
           const chunk = Math.max(1, Math.ceil(state.extraDistanceKm / 5));
           extraDistFee = (same ? 0 : 200) + (chunk * 100);
           label = `加點服務 (${state.extraDistanceKm.toFixed(1)}km)`;
@@ -367,12 +357,14 @@
         }
       }
 
+      // 手續費邏輯
       const transFee = state.payment.includes('刷卡') ? 30 : 0;
+      const infantSeatCount = parseInt(state.infants) || 0;
 
       const fees = {
         pk: state.serviceType === '接機' ? 200 : 0,
         nt: (parseInt(state.timeHour) >= 22 || parseInt(state.timeHour) < 6) ? 200 : 0,
-        if: state.infants * 200,
+        if: infantSeatCount * 200,
         sb: state.extraSignboard ? 200 : 0,
         ex: extraDistFee,
         tf: transFee
@@ -392,11 +384,11 @@
       DOM.displayPayment.innerText = `付款：${state.payment.split('(')[0]}`;
 
       DOM.feesBlock.innerHTML = '';
-      if(fees.pk) DOM.feesBlock.innerHTML += `<div class="flex justify-between text-white/90 text-sm"><span>└ 接機費</span><span>+$200</span></div>`;
+      if(fees.pk) DOM.feesBlock.innerHTML += `<div class="flex justify-between text-white/90 text-sm"><span>└ 接機服務費</span><span>+$200</span></div>`;
       if(fees.nt) DOM.feesBlock.innerHTML += `<div class="flex justify-between text-white/90 text-sm"><span>└ 夜間加成 (22-06)</span><span>+$200</span></div>`;
-      if(fees.if) DOM.feesBlock.innerHTML += `<div class="flex justify-between text-white/90 text-sm"><span>└ 安全座椅 x${state.infants}</span><span>+$${fees.if}</span></div>`;
+      if(fees.if > 0) DOM.feesBlock.innerHTML += `<div class="flex justify-between text-white/90 text-sm"><span>└ 安全座椅 x${infantSeatCount}</span><span>+$${fees.if}</span></div>`;
       if(fees.ex) DOM.feesBlock.innerHTML += `<div class="flex justify-between text-white/90 text-sm"><span>└ ${label}</span><span>+$${fees.ex}</span></div>`;
-      if(fees.tf) DOM.feesBlock.innerHTML += `<div class="flex justify-between text-white/90 text-sm"><span>└ 刷卡手續費</span><span>+$30</span></div>`;
+      if(fees.tf > 0) DOM.feesBlock.innerHTML += `<div class="flex justify-between text-white/90 text-sm"><span>└ 刷卡手續費 (街口/全支付)</span><span>+$30</span></div>`;
     }
 
     function updateDist() {
@@ -420,24 +412,16 @@
     async function start() {
       state.reservationId = generateId();
       DOM.displayId.innerText = state.reservationId;
-
       for(let i=0; i<24; i++) DOM.timeHour.add(new Option(String(i).padStart(2,'0'), String(i).padStart(2,'0')));
       for(let i=0; i<12; i++) DOM.timeMinute.add(new Option(String(i*5).padStart(2,'0'), String(i*5).padStart(2,'0')));
-      DOM.timeHour.value = "12";
-      DOM.timeMinute.value = "00";
+      DOM.timeHour.value = "12"; DOM.timeMinute.value = "00";
       
-      fetch(`${GAS_WEBAPP_URL}?action=getPrices&t=${Date.now()}`)
-        .then(r => r.json()).then(d => { if(d.status==='success') { state.priceMap=d.prices; calculate(); } });
+      fetch(`${GAS_WEBAPP_URL}?action=getPrices&t=${Date.now()}`).then(r => r.json()).then(d => { if(d.status==='success') { state.priceMap=d.prices; calculate(); } });
 
       if (typeof liff !== 'undefined') {
         liff.init({ liffId: LINE_LIFF_ID }).then(() => {
           if (!sessionStorage.getItem('notified')) {
-            Swal.fire({
-              title: '預約須知',
-              html: `<div class="text-left text-sm leading-relaxed">請於 24 小時前預約。緊急需求請撥：<br><a href="tel:0955311306" class="text-xl font-bold text-[#553f62]">0955-311-306</a></div>`,
-              confirmButtonColor: '#553f62',
-              customClass: { popup: 'swal-custom-radius' }
-            }).then(() => sessionStorage.setItem('notified', 'true'));
+            Swal.fire({ title: '預約須知', html: `<div class="text-left text-sm leading-relaxed">請於 24 小時前預約。緊急需求請撥：<br><a href="tel:0955311306" class="text-xl font-bold text-[#553f62]">0955-311-306</a></div>`, confirmButtonColor: '#553f62', customClass: { popup: 'swal-custom-radius' } }).then(() => sessionStorage.setItem('notified', 'true'));
           }
         });
       }
@@ -454,39 +438,27 @@
             const zip = comps.find(c=>c.types.includes('postal_code'))?.long_name || "";
             const city = comps.find(c=>c.types.includes('administrative_area_level_1'))?.long_name || "";
             const area = comps.find(c=>c.types.includes('sublocality_level_1'))?.long_name || "";
-            
-            // 地址處理 (處理苗票/苗栗問題)
             state[dId] = `${zip} ${city} ${area}`.trim().replace('苗票','苗栗');
             state[aId] = p.name || "";
             document.getElementById(dId).value = state[dId];
-            updateDist();
-            calculate();
+            updateDist(); calculate();
           });
         };
-        setupAC('address','district','address');
-        setupAC('extraAddress','extraDistrict','extraAddress');
+        setupAC('address','district','address'); setupAC('extraAddress','extraDistrict','extraAddress');
       };
       document.head.appendChild(s);
     }
-
     window.onload = start;
 
     document.getElementById('reservation-form').onsubmit = async (e) => {
       e.preventDefault();
-      if (!state.name || state.phone.length < 10 || !state.district) {
-        return Swal.fire({ icon:'error', title:'請填寫完整資訊', text:'姓名、電話(10碼)、地址為必填項目。', confirmButtonColor:'#553f62' });
-      }
+      if (!state.name || state.phone.length < 10 || !state.district) { return Swal.fire({ icon:'error', title:'請填寫完整資訊', text:'姓名、電話(10碼)、地址為必填項目。', confirmButtonColor:'#553f62' }); }
       if (!document.getElementById('agreed').checked) return Swal.fire('請勾選同意條款');
-
-      DOM.submitBtn.disabled = true;
-      DOM.submitBtn.innerText = "傳送中...";
-      
+      DOM.submitBtn.disabled = true; DOM.submitBtn.innerText = "傳送中...";
       const total = DOM.displayTotal.innerText;
       const msg = `【預約單】\n編號：${state.reservationId}\n全名：${state.name} ${state.title}\n電話：${state.phone}\n日期：${state.date} ${state.timeHour}:${state.timeMinute}\n服務：${state.serviceType} (${state.airport})\n航班：${state.flightNumber}\n地址：${state.district} ${state.address}\n車型：${state.carType}\n總額：${total}\n付款：${state.payment}`;
       const second = `您的預約已成功送出。\n請您耐心等候，待客服人員為您確認訂單內容無誤後，將回傳轉帳帳號／刷卡QR Code以利完成付款，感謝您的配合。`;
-
       const payload = { action:'addReservation', data: { ...state, totalFee: total, timestamp: new Date().toLocaleString(), mainAddressFull: `${state.district} ${state.address}`, extraAddressFull: state.hasExtraPoint ? `${state.extraDistrict} ${state.extraAddress}` : '無' } };
-
       try {
         await fetch(GAS_WEBAPP_URL, { method:'POST', mode:'no-cors', body:JSON.stringify(payload) });
         if (window.liff && liff.isInClient()) {
@@ -499,88 +471,42 @@
           document.getElementById('view-success').classList.remove('hidden-block');
           document.getElementById('fallback-message').innerText = msg;
         }
-      } catch(err) {
-        Swal.fire('傳送失敗','請檢查網路後重試','error');
-        DOM.submitBtn.disabled = false;
-        DOM.submitBtn.innerText = "確認預約並送出";
-      }
+      } catch(err) { Swal.fire('傳送失敗','請檢查網路後重試','error'); DOM.submitBtn.disabled = false; DOM.submitBtn.innerText = "確認預約並送出"; }
     };
 
-    document.getElementById('phone').oninput = (e) => {
-      let val = e.target.value.replace(/\D/g, '').slice(0, 10);
-      e.target.value = val;
-      state.phone = val;
-    };
+    document.getElementById('phone').oninput = (e) => { let val = e.target.value.replace(/\D/g, '').slice(0, 10); e.target.value = val; state.phone = val; };
 
     ['name','email','date','timeHour','timeMinute','serviceType','airport','carType','payment','flightNumber'].forEach(id => {
       const el = document.getElementById(id);
-      if(el) {
-        el.addEventListener('change', (e) => { 
-          state[id] = e.target.value; 
-          calculate(); 
-        });
-      }
+      if(el) el.addEventListener('change', (e) => { state[id] = e.target.value; calculate(); });
     });
+    document.getElementById('userRemarks').addEventListener('input', (e) => { state.userRemarks = e.target.value; });
 
-    DOM.hasExtraPoint.onchange = (e) => {
-      state.hasExtraPoint = e.target.checked;
-      DOM.extraPointBlock.className = e.target.checked ? 'mt-4 space-y-2' : 'hidden-block';
-      updateDist();
-      calculate();
-    };
-
-    DOM.extraSignboard.onchange = (e) => {
-      state.extraSignboard = e.target.checked;
-      DOM.signboardText.className = e.target.checked ? 'w-full mt-2 p-3 border rounded-sm bg-white' : 'hidden-block';
-      calculate();
-    };
+    DOM.hasExtraPoint.onchange = (e) => { state.hasExtraPoint = e.target.checked; DOM.extraPointBlock.className = e.target.checked ? 'mt-4 space-y-2' : 'hidden-block'; updateDist(); calculate(); };
+    DOM.extraSignboard.onchange = (e) => { state.extraSignboard = e.target.checked; DOM.signboardText.className = e.target.checked ? 'w-full mt-2 p-3 border rounded-sm bg-white' : 'hidden-block'; calculate(); };
 
     function updateOptions() {
       const render = (el, max) => {
         const val = el.value; el.innerHTML = '';
         for(let i=0; i<=max; i++) el.add(new Option(i,i));
-        el.value = val <= max ? val : 0;
+        el.value = (parseInt(val) <= max) ? val : 0;
       };
       render(DOM.adults, 6); render(DOM.children, 6); render(DOM.infants, 6);
       render(DOM.carryOn, 6); render(DOM.checkedBag, 6);
-      
       const a = parseInt(DOM.adults.value) || 0;
       const c = parseInt(DOM.children.value) || 0;
       const i = parseInt(DOM.infants.value) || 0;
       const tp = a + c + i;
-      
-      let forceLarge = false;
-      let reason = '';
-
-      if (tp > 4) { 
-        forceLarge = true;
-        reason = '人數達 5 人以上強制大車';
-      } else if (tp === 4 && i > 0) {
-        // 此處實作：總數4人且包含幼童 -> 強制大車
-        forceLarge = true;
-        reason = '人數滿 4 人且含幼童強制大車';
-      }
-
-      if (forceLarge) { 
-        state.carType = '大車'; 
-        DOM.carType.value = '大車'; 
-        DOM.carType.disabled = true; 
-        DOM.carTypeMsg.innerText = `※ ${reason}`; 
-        DOM.carTypeMsg.classList.remove('hidden-block'); 
-      } else { 
-        DOM.carType.disabled = false; 
-        DOM.carTypeMsg.classList.add('hidden-block'); 
-      }
+      let forceLarge = false; let reason = '';
+      if (tp > 4) { forceLarge = true; reason = '人數達 5 人以上強制大車'; }
+      else if (tp === 4 && i > 0) { forceLarge = true; reason = '人數滿 4 人且含幼童強制大車'; }
+      if (forceLarge) { state.carType = '大車'; DOM.carType.value = '大車'; DOM.carType.disabled = true; DOM.carTypeMsg.innerText = `※ ${reason}`; DOM.carTypeMsg.classList.remove('hidden-block'); }
+      else { DOM.carType.disabled = false; DOM.carTypeMsg.classList.add('hidden-block'); }
+      state.infants = i; // 更新 state
       calculate();
     }
-    
-    [DOM.adults, DOM.children, DOM.infants, DOM.carryOn, DOM.checkedBag].forEach(el => {
-      el.addEventListener('change', updateOptions);
-    });
-    
-    // 初始化人數
+    [DOM.adults, DOM.children, DOM.infants, DOM.carryOn, DOM.checkedBag].forEach(el => el.onchange = updateOptions);
     updateOptions();
-
   </script>
 </body>
 </html>
