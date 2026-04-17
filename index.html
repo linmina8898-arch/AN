@@ -156,12 +156,12 @@
           
           <div class="grid grid-cols-3 gap-2 text-center text-[11px] font-bold text-gray-700">
             <div>大人<select id="adults" class="w-full p-3 border bg-white text-base"></select></div>
-            <div>小孩(4~12歲)<select id="children" class="w-full p-3 border bg-white text-base"></select></div>
+            <div>小孩(4-12歲)<select id="children" class="w-full p-3 border bg-white text-base"></select></div>
             <div>幼童(4歲下)<select id="infants" class="w-full p-3 border bg-white text-base"></select></div>
           </div>
           <div class="grid grid-cols-2 gap-2 text-center text-[11px] font-bold text-gray-700">
             <div>登機箱<select id="carryOn" class="w-full p-3 border bg-white text-base"></select></div>
-            <div>託運(21~29吋)<select id="checkedBag" class="w-full p-3 border bg-white text-base"></select></div>
+            <div>託運(21-29吋)<select id="checkedBag" class="w-full p-3 border bg-white text-base"></select></div>
           </div>
         </section>
 
@@ -174,7 +174,7 @@
           <div class="space-y-1">
             <label class="block text-sm font-bold text-gray-700 flex justify-between items-center">
               <span>付款方式</span>
-              <span class="text-red-500 text-[10px] font-bold">※首次預約僅能使用轉帳/刷卡</span>
+              <span class="text-red-500 text-[10px] font-bold underline">首次預約僅能使用轉帳/刷卡</span>
             </label>
             <select id="payment" class="w-full p-3 border font-bold rounded-sm outline-none focus:border-[#553f62] bg-white text-base">
               <option value="轉帳">轉帳</option>
@@ -250,7 +250,6 @@
   </div>
 
   <script>
-    // --- 環境變數 ---
     const GAS_WEBAPP_URL = 'https://script.google.com/macros/s/AKfycbxg636TnWyiWBdj7gyLyzglO2vYkA4MuEY5uQHwdUVEY4je-tTuHjz6bMXw_dbRWA1J/exec';
     const GOOGLE_MAPS_API_KEY = 'AIzaSyAxYym5ZR8puPb0iiycHdwzTJTKH0Aears';
     const LINE_LIFF_ID = '2009792282-1qTp0cNm';
@@ -295,62 +294,58 @@
       payment: document.getElementById('payment')
     };
 
-    // --- 初始化輔助 ---
     function generateId() {
       const d = new Date();
-      const ds = `${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}`;
-      const r = Math.random().toString(36).substring(2, 5).toUpperCase();
-      return `AS${ds}${r}`;
+      return `AS${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}${Math.random().toString(36).substring(2, 5).toUpperCase()}`;
     }
 
-    // 智慧型搜尋報價 logic - 深度匹配香山、頭份等變體
+    // --- 智慧搜尋核心修正 ---
     function findPrice(airport, loc) {
       if (!loc || !state.priceMap || !state.priceMap.length) return null;
       
       const aptKey = airport.replace('機場','');
-      // 正規化地址 (移除空格、校正錯字)
-      let normUserLoc = loc.replace(/\s+/g,'').replace('苗票', '苗栗');
+      // 深度清掃地址，處理苗栗糾錯，並移除空格
+      let cleanLoc = loc.replace(/\s+/g,'').replace('苗票', '苗栗');
       
-      // 提取使用者輸入中的 3 碼郵遞區號 (如 300, 351)
-      const userZip = normUserLoc.match(/\d{3}/)?.[0];
-      
-      // 提取核心地名 (移除縣市關鍵字，只留核心行政區，如 "香山", "頭份")
-      const pureUserArea = normUserLoc.replace(/台灣|台北市|新北市|桃園市|新竹市|新竹縣|苗栗縣|台中市/g, '').replace(/區|鄉|鎮|市/g, '');
+      // 優先提取 3 位數郵區 (如 300, 351)
+      const zipMatch = cleanLoc.match(/\d{3}/);
+      const userZip = zipMatch ? zipMatch[0] : null;
+
+      // 提取核心地名關鍵字 (如：香山、頭份、信義)
+      // 移除縣市名稱以減少干擾
+      const coreKeywords = cleanLoc.replace(/台灣|台北市|新北市|桃園市|新竹市|新竹縣|苗栗縣|台中市/g, '').replace(/區|鄉|鎮|市/g, '');
 
       let bestMatch = null;
+
       for (const item of state.priceMap) {
-        // 先過濾機場 (A 欄)
         const itemApt = String(item.a || item.a機場 || "").trim();
         if (!itemApt.includes(aptKey) && !aptKey.includes(itemApt)) continue;
 
-        // 讀取資料庫中的郵區 (B 欄) 與地區 (C 欄)
-        const itemZip = String(item.b || item.b郵遞區號 || "").trim();
-        const itemArea = String(item.c || item.c地區 || "").trim();
-        const itemAreaPure = itemArea.replace(/區|鄉|鎮|市/g, '');
+        const itemZip = String(item.b || item.b郵遞區號 || item['b郵遞區號'] || "").trim();
+        const itemArea = String(item.c || item.c地區 || item['c地區'] || "").trim();
+        const itemAreaShort = itemArea.replace(/區|鄉|鎮|市/g, '');
 
-        // 策略 1：郵遞區號完全匹配 (最高優先權)
+        // 策略 1：郵遞區號完全吻合 (例如 300 對上 300) -> 絕對優先
         if (userZip && itemZip === userZip) return item;
 
-        // 策略 2：資料庫地區名稱完全包含在使用者地址中 (如 "香山區" 包含在 "新竹市香山區")
-        if (itemArea && normUserLoc.includes(itemArea)) return item;
+        // 策略 2：資料庫地區名稱包含在使用者輸入中 (例如 使用者輸入包含 "香山區")
+        if (itemArea && cleanLoc.includes(itemArea)) return item;
 
-        // 策略 3：核心地名匹配 (如 "香山" 匹配 "香山")
-        if (itemAreaPure && pureUserArea.includes(itemAreaPure)) {
+        // 策略 3：核心地名匹配 (例如 資料庫 "香山" 匹配 使用者核心關鍵字中的 "香山")
+        if (itemAreaShort && coreKeywords.includes(itemAreaShort)) {
           bestMatch = item;
         }
       }
       return bestMatch;
     }
 
-    function extractFeeFromItem(item) {
+    function extractFee(item) {
       if (!item) return 0;
       let val = 0;
       const type = state.carType;
-      // 支援 d, e, f 或 小車, 大車, 豪華車 等多種屬性標籤
       if (type === '大車') val = item.e || item['e大車'] || item.large || 0;
       else if (type === '豪華車') val = item.f || item['f豪華車'] || item.luxury || 0;
       else val = item.d || item['d小車'] || item.small || 0;
-      
       return parseInt(String(val).replace(/[^\d]/g, ''), 10) || 0;
     }
 
@@ -358,10 +353,9 @@
       const mainMatch = findPrice(state.airport, state.district);
       const extraMatch = state.hasExtraPoint ? findPrice(state.airport, state.extraDistrict) : null;
       
-      const p1 = extractFeeFromItem(mainMatch);
-      const p2 = extractFeeFromItem(extraMatch);
+      const p1 = extractFee(mainMatch);
+      const p2 = extractFee(extraMatch);
       
-      // 加點計費基準：取兩者中報價較高者
       const base = state.hasExtraPoint ? Math.max(p1, p2) : p1;
       const baseName = (state.hasExtraPoint && p2 > p1) ? (state.extraDistrict || '加點點') : (state.district || '接送點');
       
@@ -372,7 +366,6 @@
           const c1 = state.district.replace(/\s+/g,'').match(/[\u4e00-\u9fa5]{3}/)?.[0] || "";
           const c2 = state.extraDistrict.replace(/\s+/g,'').match(/[\u4e00-\u9fa5]{3}/)?.[0] || "";
           const same = (c1 && c2 && c1.substring(0,2) === c2.substring(0,2));
-          
           const chunk = Math.max(1, Math.ceil(state.extraDistanceKm / 5));
           extraDistFee = (same ? 0 : 200) + (chunk * 100);
           label = `加點服務 (${state.extraDistanceKm.toFixed(1)}km)`;
@@ -381,14 +374,13 @@
         }
       }
 
-      // 手續費與座椅費用
       const transFee = state.payment.includes('刷卡') ? 30 : 0;
-      const infantsCount = parseInt(state.infants) || 0;
+      const infantSeatCount = parseInt(state.infants) || 0;
 
       const fees = {
         pk: state.serviceType === '接機' ? 200 : 0,
         nt: (parseInt(state.timeHour) >= 22 || parseInt(state.timeHour) < 6) ? 200 : 0,
-        if: infantsCount * 200,
+        if: infantSeatCount * 200,
         sb: state.extraSignboard ? 200 : 0,
         ex: extraDistFee,
         tf: transFee
@@ -410,7 +402,7 @@
       DOM.feesBlock.innerHTML = '';
       if(fees.pk) DOM.feesBlock.innerHTML += `<div class="flex justify-between text-white/90 text-sm"><span>└ 接機服務費</span><span>+$200</span></div>`;
       if(fees.nt) DOM.feesBlock.innerHTML += `<div class="flex justify-between text-white/90 text-sm"><span>└ 夜間加成 (22-06)</span><span>+$200</span></div>`;
-      if(fees.if > 0) DOM.feesBlock.innerHTML += `<div class="flex justify-between text-white/90 text-sm"><span>└ 安全座椅 x${infantsCount}</span><span>+$${fees.if}</span></div>`;
+      if(fees.if > 0) DOM.feesBlock.innerHTML += `<div class="flex justify-between text-white/90 text-sm"><span>└ 安全座椅 x${infantSeatCount}</span><span>+$${fees.if}</span></div>`;
       if(fees.ex) DOM.feesBlock.innerHTML += `<div class="flex justify-between text-white/90 text-sm"><span>└ ${label}</span><span>+$${fees.ex}</span></div>`;
       if(fees.tf > 0) DOM.feesBlock.innerHTML += `<div class="flex justify-between text-white/90 text-sm"><span>└ 刷卡手續費 (街口/全支付)</span><span>+$30</span></div>`;
     }
@@ -537,7 +529,7 @@
         DOM.carType.disabled = false; 
         DOM.carTypeMsg.classList.add('hidden-block'); 
       }
-      state.infants = i; // 更新幼童數量 state
+      state.infants = i;
       calculate();
     }
     [DOM.adults, DOM.children, DOM.infants, DOM.carryOn, DOM.checkedBag].forEach(el => el.onchange = updateOptions);
