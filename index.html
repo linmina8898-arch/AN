@@ -231,7 +231,34 @@
         <!-- 備註 -->
         <section class="space-y-4">
           <h2 class="text-lg font-bold border-b-2 border-[#553f62] pb-2 text-[#553f62]">其他備註</h2>
-          <textarea id="userRemarks" rows="4" class="w-full p-3 border rounded-sm outline-none text-sm" placeholder="如攜帶紙箱、高爾夫球具、大型輪椅等，請務必告知。"></textarea>
+          <textarea id="userRemarks" rows="4" class="w-full p-3 border rounded-sm outline-none text-sm" placeholder="如攜帶紙箱、運動版行李箱(胖胖箱)、高爾夫球具、雪板、輪椅、腳踏車箱、大型樂器...等，請務必告知。其他需要我們注意的事項也可在這說明。"></textarea>
+        </section>
+
+        <!-- 乘車注意事項 -->
+        <section class="space-y-3 bg-gray-50 p-4 border border-gray-200 rounded-sm">
+          <h2 class="text-base font-black text-[#553f62] border-b border-gray-300 pb-1">【乘車注意事項】</h2>
+          <ul class="space-y-2 text-[12px] leading-relaxed text-gray-700 font-bold">
+            <li class="flex gap-2">
+              <span class="text-[#553f62] shrink-0">●</span>
+              <span><strong class="text-[#553f62]">臨時加點：</strong>司機無法私自增加停靠點(車輛皆有GPS）。如需臨時加點，請告知司機回報公司後方可執行。</span>
+            </li>
+            <li class="flex gap-2">
+              <span class="text-[#553f62] shrink-0">●</span>
+              <span><strong class="text-[#553f62]">預約車型：</strong>請務必依「實際乘車人數」與「行李件數尺寸」預約合適車款。以免當天車輛乘載不下擔誤貴賓寶貴的時間。</span>
+            </li>
+            <li class="flex gap-2">
+              <span class="text-[#553f62] shrink-0">●</span>
+              <span><strong class="text-[#553f62]">行李與乘車規範：</strong>全程請繫妥安全帶，座位及腳踏區僅限放隨身背包。若現場行李過多不符預約車型，公司有權拒載，且該趟行程恕不退費。</span>
+            </li>
+            <li class="flex gap-2">
+              <span class="text-[#553f62] shrink-0">●</span>
+              <span><strong class="text-[#553f62]">車內禁食：</strong>為維護乘車品質，顧及每位貴賓權益，車內全面禁止飲食。</span>
+            </li>
+            <li class="flex gap-2">
+              <span class="text-[#553f62] shrink-0">●</span>
+              <span><strong class="text-[#553f62]">兒童安全座椅：</strong>0~4歲（18公斤內）嬰幼兒依法須使用安全座椅。若未依需求加購導致違規，相關罰款將由乘客自行負擔。</span>
+            </li>
+          </ul>
         </section>
 
         <section class="mt-4 border-t-2 border-[#553f62] pt-6 pb-4">
@@ -314,29 +341,35 @@
       }
     }
 
-    // 價格查詢邏輯
+    // 【積分權重制】價格查詢邏輯
     function findPriceData(airport, locString) {
       if (!locString || Object.keys(state.priceMap).length === 0) return null;
+      
       const aptPrefix = airport.replace('機場','');
       const userFull = cleanAll(locString.replace(/\s+/g,''));
       const userZip = userFull.match(/\d{3}/)?.[0] || '';
       const userCore = getCore(userFull);
 
-      const candidates = Object.keys(state.priceMap).filter(k => k.includes(aptPrefix)).map(k => {
-        const item = state.priceMap[k];
-        const itemFull = cleanAll((k.split('_')[1] || '').replace(/\s+/g,''));
-        const itemZip = item.b || itemFull.match(/\d{3}/)?.[0] || '';
-        const itemCore = getCore(itemFull);
-        let score = 0;
-        if (userZip && itemZip === userZip) score += 1000;
-        if (userCore && itemCore && (userCore === itemCore)) score += 500;
-        if (userFull.includes(itemFull)) score += (100 + itemFull.length * 10);
-        return { key: k, score };
-      }).filter(x => x.score > 0);
+      const candidates = Object.keys(state.priceMap)
+        .filter(k => k.startsWith(aptPrefix))
+        .map(k => {
+          const item = state.priceMap[k];
+          const itemFull = cleanAll((item.d || k.split('_')[1] || '').replace(/\s+/g,''));
+          const itemZip = String(item.b || '').match(/\d{3}/)?.[0] || '';
+          const itemCore = getCore(itemFull);
+          
+          let score = 0;
+          if (userZip && itemZip === userZip) score += 1000;
+          if (userCore && itemCore && (userCore === itemCore)) score += 500;
+          if (userFull.includes(itemFull)) score += (100 + itemFull.length * 10);
+          
+          return { item, score };
+        })
+        .filter(x => x.score > 0);
 
       if (candidates.length > 0) {
         candidates.sort((a, b) => b.score - a.score); 
-        return state.priceMap[candidates[0].key];
+        return candidates[0].item;
       }
       return null;
     }
@@ -349,20 +382,22 @@
       const getVal = (item) => {
         if (!item) return 0;
         const cType = state.carType;
-        // 修改處：對應欄位 d=小車, e=大車, f=豪華車
-        if (cType === '大車') return parseInt(String(item.e || item['大車']).replace(/\D/g,'')) || 0;
-        if (cType === '豪華車款(SIENNA / BENZ V)') return parseInt(String(item.f || item['豪華車款(SIENNA / BENZ V)']).replace(/\D/g,'')) || 0;
-        return parseInt(String(item.d || item['小車']).replace(/\D/g,'')) || 0;
+        let price = 0;
+        if (cType === '大車') price = item.e || item['大車'];
+        else if (cType.includes('豪華')) price = item.f || item['豪華車款(SIENNA / BENZ V)'];
+        else price = item.d || item['小車'];
+        
+        return parseInt(String(price || 0).replace(/\D/g,'')) || 0;
       };
 
       const p1 = getVal(mainMatch), p2 = getVal(extraMatch);
       const base = state.hasExtraPoint ? Math.max(p1, p2) : p1;
-      const matchedName = (state.hasExtraPoint && p2 > p1) ? (extraMatch?.c || state.extraDistrict) : (mainMatch?.c || state.district);
+      const matchedName = (state.hasExtraPoint && p2 > p1) ? (extraMatch?.d || state.extraDistrict) : (mainMatch?.d || state.district);
 
       let extraDistFee = 0;
       if (state.hasExtraPoint && state.extraDistanceKm > 0) {
         const c1 = getCore(state.district), c2 = getCore(state.extraDistrict);
-        extraDistFee = (c1 === c2 ? 0 : 200) + (Math.max(1, Math.ceil(state.extraDistanceKm / 5)) * 100);
+        extraDistFee = (c1 === c2 ? 100 : 200) + (Math.max(1, Math.ceil(state.extraDistanceKm / 5)) * 100);
       }
 
       const totalSeats = state.babySeat + state.childSeat + state.boosterSeat;
@@ -377,7 +412,6 @@
 
       const totalValue = base > 0 ? (base + Object.values(fees).reduce((a,b)=>a+b,0)) : null;
 
-      // 更新 UI
       document.getElementById('display-carType-name').innerText = `基本車資 (${state.carType.includes('豪華') ? '豪華' : state.carType})`;
       document.getElementById('display-route').innerText = `${cleanAll(matchedName) || '未選地區'} ↔ ${state.airport}`;
       DOM.displayBasePrice.innerText = base ? `$${base}` : '待報價';
@@ -394,7 +428,6 @@
       if(fees.tf) DOM.feesBlock.innerHTML += `<div class="flex justify-between"><span>└ 刷卡金流手續費</span><span>+$30</span></div>`;
     }
 
-    // Google Maps 相關
     function updateExtraDistance() {
       if (!state.hasExtraPoint || !state.address || !state.extraAddress || !window.google) {
         state.extraDistanceKm = 0; calculatePrice(); return;
@@ -419,7 +452,9 @@
         let zip = (comps.find(c=>c.types.includes('postal_code'))?.long_name || "").substring(0,3);
         let city = cleanAll(comps.find(c=>c.types.includes('administrative_area_level_1'))?.long_name || "");
         let area = (comps.find(c=>c.types.includes('sublocality_level_1')) || comps.find(c=>c.types.includes('locality')))?.long_name || "";
+        
         if (full.includes("香山")) { zip="300"; city="新竹市"; area="香山區"; }
+        
         state[dId] = `${zip} ${city} ${area}`.trim();
         state[aId] = cleanAll(place.name || "");
         document.getElementById(dId).value = state[dId];
@@ -437,7 +472,6 @@
       } else { setupAC('address','district','address'); setupAC('extraAddress','extraDistrict','extraAddress'); }
     }
 
-    // 選單更新邏輯
     function updateOptions() {
       const render = (el, max) => {
         const val = el.value; el.innerHTML = '';
@@ -455,7 +489,6 @@
       const tp = a + c + i;
       const tl = co + cb;
 
-      // 座椅強制連動
       if (i > 0 || c > 0) {
           DOM.childSeatsBlock.classList.remove('hidden-block');
           state.babySeat = render(DOM.babySeat, i);
@@ -466,7 +499,6 @@
           state.babySeat = state.childSeat = state.boosterSeat = 0;
       }
 
-      // 上限警告
       if (tp > 6 || tl > 6) {
           DOM.limitMsg.innerText = `⚠️ 目前已選：${tp}人 / ${tl}件行李，超過大車上限 (6人6件)。`;
           DOM.limitMsg.classList.remove('hidden-block');
@@ -478,11 +510,9 @@
           DOM.submitBtn.classList.replace('bg-gray-400', 'bg-[#553f62]');
       }
       
-      // 自動跳轉大車邏輯：大於4人或有幼童(需裝座椅)
       if (tp > 4 || (tp === 4 && i > 0)) { 
         if (state.carType === '小車') state.carType = '大車';
         DOM.carType.value = state.carType;
-        // 小車選項隱藏/禁用
         DOM.carType.options[0].disabled = true;
         DOM.carTypeMsg.innerText = "※ 人數或包含幼童(安全座椅)時，系統自動指定大車車型。";
         DOM.carTypeMsg.classList.remove('hidden-block'); 
@@ -519,20 +549,22 @@
     DOM.signboardText.oninput = (e) => state.signboardText = e.target.value;
     document.getElementById('userRemarks').oninput = (e) => state.userRemarks = e.target.value;
 
-    // 載入價格
     async function loadPrices() {
       try {
         const res = await fetch(`${GAS_WEBAPP_URL}?action=getPrices&t=${Date.now()}`);
         const d = await res.json();
         if (d.status === 'success') { 
           const prices = {};
-          d.prices.forEach(it => prices[`${it.a}_${it.c}`] = it);
-          state.priceMap = prices; calculatePrice(); 
+          d.prices.forEach(it => {
+            const key = `${it.a}_${it.d || it.c}`; 
+            prices[key] = it;
+          });
+          state.priceMap = prices; 
+          calculatePrice(); 
         }
       } catch(e) { console.warn('報價載入失敗'); }
     }
 
-    // 初始化
     window.onload = () => {
       state.reservationId = generateId(); DOM.displayId.innerText = state.reservationId;
       for(let i=0; i<24; i++) DOM.timeHour.add(new Option(String(i).padStart(2,'0'), String(i).padStart(2,'0')));
@@ -542,7 +574,6 @@
       if(typeof liff !== 'undefined') liff.init({ liffId: LINE_LIFF_ID }).catch(e => console.error(e));
     };
 
-    // 提交表單
     document.getElementById('reservation-form').onsubmit = async (e) => {
       e.preventDefault();
       const infCount = parseInt(DOM.infants.value) || 0;
@@ -553,7 +584,7 @@
         return Swal.fire({title:'資訊不完整', text:'請填寫姓名、電話並從選單選取正確地址', icon:'error', customClass:{popup:'swal-custom-radius'}});
       }
       if (infCount > 0 && seatTotal !== infCount) {
-        return Swal.fire({title:'座椅數量不符', text:`您有 ${infCount} 位幼童，必須選滿 ${infCount} 張座椅（反向+正向）。`, icon:'warning', customClass:{popup:'swal-custom-radius'}});
+        return Swal.fire({title:'座椅數量不符', text:`您有 ${infCount} 位幼童，必須選滿 ${infCount} 張座椅。`, icon:'warning', customClass:{popup:'swal-custom-radius'}});
       }
       if (chdCount > 0 && state.boosterSeat !== chdCount) {
         return Swal.fire({title:'增高墊數量不符', text:`您有 ${chdCount} 位兒童，請選取 ${chdCount} 個增高墊。`, icon:'warning', customClass:{popup:'swal-custom-radius'}});
@@ -584,7 +615,11 @@
                   `備註：${state.userRemarks || '無'}`;
 
       try {
-        await fetch(GAS_WEBAPP_URL, { method:'POST', mode:'no-cors', body: JSON.stringify({ action: 'addReservation', data: { reservationId: state.reservationId, name: `${state.name} ${state.title}`, phone: state.phone, date: state.date, time: `${state.timeHour}:${state.timeMinute}`, mainAddress: mainAddr, extraAddress: extraAddr, carType: state.carType, totalFee: DOM.displayTotal.innerText, payment: state.payment, remarks: state.userRemarks || '無' } }) });
+        await fetch(GAS_WEBAPP_URL, { 
+          method:'POST', 
+          mode:'no-cors', 
+          body: JSON.stringify({ action: 'addReservation', data: { ...state, totalFee: DOM.displayTotal.innerText, mainAddress: mainAddr, extraAddress: extraAddr } }) 
+        });
         
         if (window.liff && liff.isInClient()) {
           await liff.sendMessages([{type:'text', text:msg}, {type:'text', text: `預約成功！待客服確認後將回傳付款資訊。`}]);
