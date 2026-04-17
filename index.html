@@ -272,7 +272,7 @@
       return `AS${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}${Math.random().toString(36).substring(2, 5).toUpperCase()}`;
     }
 
-    // --- 智慧報價與計費 (優化精準度與排序權重) ---
+    // --- 智慧報價與計費 (優化為積分權重制，解決香山與新竹市衝突) ---
     function findPriceData(airport, locString) {
       if (!locString || Object.keys(state.priceMap).length === 0) return null;
       const aptPrefix = airport.replace('機場','');
@@ -281,52 +281,39 @@
       const userZip = zipMatch ? zipMatch[1] : '';
       const areaMatch = userNorm.match(/[\u4e00-\u9fa5]{2,}(區|鄉|鎮|市)$/);
       const userArea = areaMatch ? areaMatch[0] : '';
+      const cleanUserArea = userArea.replace(/區|鄉|鎮|市|縣/g, '');
 
       const available = Object.keys(state.priceMap).filter(k => {
         const apt = k.split('_')[0];
         return apt.includes(aptPrefix) || aptPrefix.includes(apt);
-      }).map(k => ({
-        key: k,
-        norm: k.split('_')[1].replace(/\s+/g,'').replace('台灣',''),
-        zip: state.priceMap[k].b || k.split('_')[1].match(/\d{3}/)?.[0] || '',
-        text: k.split('_')[1].replace(/\d+/g,'').replace('台灣','')
-      }));
+      }).map(k => {
+        const part2 = k.split('_')[1] || '';
+        return {
+          key: k,
+          norm: part2.replace(/\s+/g,'').replace('台灣',''),
+          zip: state.priceMap[k].b || part2.match(/\d{3}/)?.[0] || '',
+          text: part2.replace(/\d+/g,'').replace('台灣','')
+        };
+      });
 
-      // 1. 完全精準比對
-      let m = available.find(x => x.norm === userNorm);
-      if (m) return state.priceMap[m.key];
-
-      // 2. 針對 300 郵區特別強化：依據地區關鍵字分流
-      // 修正問題：將符合的陣列依文字長度降冪排序，長度越長代表越精準 (如: 新竹市香山區 > 新竹市)
-      if (userZip === '300') {
-        const targets = available.filter(x => x.zip === '300' && userNorm.includes(x.text.replace(/區/g, '')));
-        if (targets.length > 0) {
-          targets.sort((a, b) => b.text.length - a.text.length); // 取字串最長的
-          return state.priceMap[targets[0].key];
-        }
-      }
-
-      // 3. 【優先】使用郵遞區號 (ZIP) 進行比對
-      if (userZip) {
-        // 先篩選出相同郵遞區號，且地名包含在使用者輸入的地址中的項目
-        const targets = available.filter(x => x.zip === userZip && userNorm.includes(x.text.replace(/區|鄉|鎮|市/g, '')));
-        if (targets.length > 0) {
-          targets.sort((a, b) => b.text.length - a.text.length); // 取字串最長的
-          return state.priceMap[targets[0].key];
-        }
+      const targets = available.map(x => {
+        let score = 0;
+        if (x.norm === userNorm) score += 1000; // 完全精確吻合，最高分
+        if (userZip && x.zip === userZip) score += 100; // 郵遞區號吻合
         
-        // 若找不到包含的名稱，退回拿同郵遞區號的最後防線
-        m = available.find(x => x.zip === userZip);
-        if (m) return state.priceMap[m.key];
-      }
-
-      // 4. 區域模糊比對 (退回最後防線)
-      if (userArea) {
-        const targets = available.filter(x => x.text.includes(userArea) || userArea.includes(x.text));
-        if (targets.length > 0) {
-          targets.sort((a, b) => b.text.length - a.text.length); // 取字串最長的
-          return state.priceMap[targets[0].key];
+        const cleanXText = x.text.replace(/區|鄉|鎮|市|縣/g, '');
+        if (cleanUserArea && cleanXText && (cleanXText.includes(cleanUserArea) || cleanUserArea.includes(cleanXText))) {
+          score += 500; // 行政區名稱直接命中 (例如: 香山區 配 香山)
+        } else if (cleanXText && userNorm.includes(cleanXText)) {
+          score += 10 * cleanXText.length; // 模糊包含，依照字數給權重 (例如: 新竹市)
         }
+        return { ...x, score };
+      }).filter(x => x.score > 0);
+
+      if (targets.length > 0) {
+        // 分數高優先，同分則取長度長(更詳細)
+        targets.sort((a, b) => b.score - a.score || b.text.length - a.text.length); 
+        return state.priceMap[targets[0].key];
       }
       return null;
     }
