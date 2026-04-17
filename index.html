@@ -272,7 +272,7 @@
       return `AS${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}${Math.random().toString(36).substring(2, 5).toUpperCase()}`;
     }
 
-    // --- 智慧報價與計費 (整合 300 郵區東/北/香山分流) ---
+    // --- 智慧報價與計費 (優化精準度與排序權重) ---
     function findPriceData(airport, locString) {
       if (!locString || Object.keys(state.priceMap).length === 0) return null;
       const aptPrefix = airport.replace('機場','');
@@ -297,21 +297,36 @@
       if (m) return state.priceMap[m.key];
 
       // 2. 針對 300 郵區特別強化：依據地區關鍵字分流
+      // 修正問題：將符合的陣列依文字長度降冪排序，長度越長代表越精準 (如: 新竹市香山區 > 新竹市)
       if (userZip === '300') {
-        const target = available.find(x => x.zip === '300' && userNorm.includes(x.text.replace(/區/g, '')));
-        if (target) return state.priceMap[target.key];
+        const targets = available.filter(x => x.zip === '300' && userNorm.includes(x.text.replace(/區/g, '')));
+        if (targets.length > 0) {
+          targets.sort((a, b) => b.text.length - a.text.length); // 取字串最長的
+          return state.priceMap[targets[0].key];
+        }
       }
 
       // 3. 【優先】使用郵遞區號 (ZIP) 進行比對
       if (userZip) {
+        // 先篩選出相同郵遞區號，且地名包含在使用者輸入的地址中的項目
+        const targets = available.filter(x => x.zip === userZip && userNorm.includes(x.text.replace(/區|鄉|鎮|市/g, '')));
+        if (targets.length > 0) {
+          targets.sort((a, b) => b.text.length - a.text.length); // 取字串最長的
+          return state.priceMap[targets[0].key];
+        }
+        
+        // 若找不到包含的名稱，退回拿同郵遞區號的最後防線
         m = available.find(x => x.zip === userZip);
         if (m) return state.priceMap[m.key];
       }
 
       // 4. 區域模糊比對 (退回最後防線)
       if (userArea) {
-        m = available.find(x => x.text.includes(userArea) || userArea.includes(x.text));
-        if (m) return state.priceMap[m.key];
+        const targets = available.filter(x => x.text.includes(userArea) || userArea.includes(x.text));
+        if (targets.length > 0) {
+          targets.sort((a, b) => b.text.length - a.text.length); // 取字串最長的
+          return state.priceMap[targets[0].key];
+        }
       }
       return null;
     }
