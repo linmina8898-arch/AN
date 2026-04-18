@@ -746,7 +746,7 @@
             const rideHourVal = document.getElementById('rideHour').value;
             const rideMinVal = document.getElementById('rideMinute').value;
 
-            // --- 強化 24 小時驗證邏輯 ---
+            // --- 重要：24 小時預約限制驗證邏輯 ---
             if (rideDateEl.value) {
                 const now = new Date();
                 const rideDateTime = new Date(`${rideDateEl.value}T${rideHourVal}:${rideMinVal}:00`);
@@ -761,10 +761,10 @@
                     });
                     rideDateEl.value = "";
                     rideDateEl.type = "text";
-                    return; 
+                    return; // 終止後續計算，強迫重新選
                 }
 
-                // 更新急單勾選 (24~48H)
+                // 急單標註 (24~48H)
                 const optUrgent = document.getElementById('optUrgent');
                 const lblUrgent = document.getElementById('lblUrgent');
                 if (diffHours >= 24 && diffHours <= 48) {
@@ -802,7 +802,6 @@
 
             const carType = document.getElementById('carType').value;
             
-            // --- 行程路線顯示：使用完整的「區碼及區域」且處理接機反轉 ---
             const areaDisplay = fullZipInfo || "地區";
             if (rideType === "送機") {
                 document.getElementById('quoteRoute').innerText = `${areaDisplay} → ${airport}`;
@@ -813,12 +812,10 @@
             document.getElementById('quoteCarType').innerText = carType;
             document.getElementById('quotePayment').innerText = document.getElementById('payment').value;
 
-            // --- 報價邏輯：如有加點，以價高者報價 ---
             basicFare = 0;
             let fareDisplay = "客服人工確認報價";
             
             if (mainZip && airport && priceTable.length > 0) {
-                // 1. 查找主地址價格
                 const matchMain = findMatchedFare(mainZip, mainArea, airport);
                 let mainPrice = 0;
                 if (matchMain) {
@@ -827,7 +824,6 @@
                     else mainPrice = parseInt(matchMain.f) || 0;
                 }
 
-                // 2. 如果有加點，比對加點地址價格
                 let finalBasePrice = mainPrice;
                 if (needExtraStop && extraZip) {
                     const matchExtra = findMatchedFare(extraZip, extraArea, airport);
@@ -836,8 +832,6 @@
                         if (carType === '小車') extraPrice = parseInt(matchExtra.d) || 0;
                         else if (carType === '大車') extraPrice = parseInt(matchExtra.e) || 0;
                         else extraPrice = parseInt(matchExtra.f) || 0;
-                        
-                        // 取價高者
                         finalBasePrice = Math.max(mainPrice, extraPrice);
                     }
                 }
@@ -911,7 +905,6 @@
             e.preventDefault();
             const sameAs = document.getElementById('sameAsOrderer').checked;
             
-            // 收集所有錯誤
             let errors = [];
 
             // 1. 訂車人資訊
@@ -959,7 +952,6 @@
                 errors.push("請勾選同意【乘車注意事項】聲明");
             }
 
-            // 若有錯誤一次噴出
             if (errors.length > 0) {
                 Swal.fire({
                     title: '資料未填寫完整',
@@ -987,7 +979,6 @@
                 surchargeArr.push(`安全座椅(${seatDetails.join(', ')})`);
             }
 
-            // 準備提交資料
             const payload = {
                 orderId: document.getElementById('orderId').value,
                 sysLineId: document.getElementById('sysLineId').value,
@@ -1030,10 +1021,10 @@
                             title: document.getElementById('ordererTitle').value,
                             phone: payload.ordererPhone,
                             email: document.getElementById('email').value,
-                            lineUid: payload.sysLineId, // 自動抓取的 LINE UID
-                            lineId: payload.userLineId,   // 使用者填寫的 LINE ID
-                            paxFullName: payload.paxName + payload.paxTitle, // 乘車人全名一格
-                            paxPhone: payload.paxPhone,                       // 乘車人電話一格
+                            lineUid: payload.sysLineId, 
+                            lineId: payload.userLineId,   
+                            paxFullName: payload.paxName + payload.paxTitle, 
+                            paxPhone: payload.paxPhone,                       
                             date: payload.rideDate,
                             time: payload.rideTime,
                             serviceType: payload.rideType,
