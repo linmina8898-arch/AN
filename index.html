@@ -415,7 +415,7 @@
         const LINE_OA_LINK = "https://line.me/R/ti/p/@220ewdah";
         const GAS_URL = "https://script.google.com/macros/s/AKfycbxDtwaaCUZcWNLqhfhSDPomP9NcC2otnQwFzQysgDRpxBt1sBxRdL1ZqtSuN8Okbnw3/exec"; 
         // 報價 API 連結
-        const PRICE_API_URL = "https://script.google.com/macros/s/AKfycbwbS3i7EQSPULmFONayAFncvdq0c11W_mWlDsF1DWwUw6FwQia6E0Tj1Tx2RAJIisyN/exec";
+        const PRICE_API_URL = "https://script.google.com/macros/s/AKfycbxDtwaaCUZcWNLqhfhSDPomP9NcC2otnQwFzQysgDRpxBt1sBxRdL1ZqtSuN8Okbnw3/exec";
 
         let extraStopFee = 0;
         let extraStopDist = 0;
@@ -429,25 +429,54 @@
             return str.replace(/台灣/g, "").trim();
         }
 
-        // --- 優化：萃取完整的「郵遞區號+縣市+行政區」 ---
+        // --- 核心優化：更精準的台灣地區解析 (郵遞區號 + 縣市 + 鄉鎮市區) ---
         function parseZoneInfo(place) {
             let zip = '', city = '', dist = '';
             if (place && place.address_components) {
+                // 遍歷所有地址元件
                 place.address_components.forEach(component => {
                     const types = component.types;
-                    if (types.includes('postal_code')) zip = component.long_name;
-                    if (types.includes('administrative_area_level_1') || types.includes('administrative_area_level_2')) {
-                        if (component.long_name.match(/(市|縣)$/)) city = component.long_name;
+                    
+                    // 1. 抓取郵遞區號 (如: 300)
+                    if (types.includes('postal_code')) {
+                        zip = component.long_name;
                     }
-                    if (types.includes('administrative_area_level_3') || types.includes('locality') || types.includes('sublocality')) {
+                    
+                    // 2. 抓取縣市 (行政層級 1 或 2，如: 新竹市、台北市)
+                    if (types.includes('administrative_area_level_1') || types.includes('administrative_area_level_2')) {
                         const name = component.long_name;
-                        if (name.match(/(區|市|鎮|鄉)$/) && name !== city) dist = name;
+                        if (name.match(/(市|縣)$/)) {
+                            city = name.replace('台灣', '');
+                        }
+                    }
+                    
+                    // 3. 抓取鄉鎮市區 (行政層級 3 或 locality 或 sublocality)
+                    // 台灣的行政區通常在 sublocality_level_1 或 administrative_area_level_3
+                    if (types.includes('sublocality_level_1') || types.includes('administrative_area_level_3') || types.includes('locality')) {
+                        const name = component.long_name;
+                        // 排除已經是縣市的名稱，並確保是區/市/鎮/鄉
+                        if (name.match(/(區|市|鎮|鄉)$/) && name !== city) {
+                            dist = name;
+                        }
                     }
                 });
             }
+            
+            // 如果從組件中沒抓到行政區，嘗試從 formatted_address 中用正則表達式擷取
+            if (!dist && place.formatted_address) {
+                const addr = place.formatted_address;
+                // 比對 縣市之後的「XXX區」或「XXX市」等
+                const match = addr.match(/(?:縣|市)([^縣市]+?(?:區|市|鎮|鄉))/);
+                if (match && match[1]) {
+                    dist = match[1];
+                }
+            }
+            
+            // 整理最終顯示格式：300 新竹市香山區
             let res = zip;
-            if (city) res += (res ? ' ' : '') + city.replace('台灣', '');
+            if (city) res += (res ? ' ' : '') + city;
             if (dist) res += dist;
+            
             return res.trim();
         }
 
@@ -579,6 +608,7 @@
                 addressAutocomplete.addListener('place_changed', () => {
                     const place = addressAutocomplete.getPlace();
                     inputAddress.value = stripTaiwan(place.formatted_address);
+                    // 使用強化後的 parseZoneInfo 抓取 300 新竹市香山區
                     document.getElementById('zipcode').value = parseZoneInfo(place);
                     calculateDistanceFee();
                     updateLogic();
@@ -592,6 +622,7 @@
                 extraStopAutocomplete.addListener('place_changed', () => {
                     const place = extraStopAutocomplete.getPlace();
                     inputExtra.value = stripTaiwan(place.formatted_address);
+                    // 同步套用到加點
                     document.getElementById('extraZipcode').value = parseZoneInfo(place);
                     calculateDistanceFee();
                 });
@@ -768,7 +799,7 @@
             const airport = document.getElementById('airport').value;
             const fullZipInfo = document.getElementById('zipcode').value; // 例如 "300 新竹市香山區"
             
-            // 解析使用者輸入的 Zip 與 Area
+            // 匹配邏輯：從 "300 新竹市香山區" 分離出 300 與 行政區
             const zipParts = fullZipInfo.split(' ');
             const userZip = zipParts[0] ? zipParts[0].trim() : '';
             const userArea = zipParts.slice(1).join('').trim(); // "新竹市香山區"
@@ -787,20 +818,20 @@
             if (userZip && airport && priceTable.length > 0) {
                 const searchAirport = airport.substring(0, 2); // 例如 "桃園"
                 
-                // 優先執行完全匹配 (Zip + Area)，再退而求其次執行 Zip 匹配
                 let match = priceTable.find(item => {
                     const rowAirport = String(item.a || "").trim();
                     const rowZip = String(item.b || "").trim();
                     const rowArea = String(item.c || "").trim();
 
-                    // 檢查機場是否一致
+                    // 首先檢查機場是否一致
                     if (!rowAirport.includes(searchAirport)) return false;
 
-                    // 1. 完全精準比對 (Zip 與地區皆相同)
+                    // 1. 完全精準比對 (Zip + 地區)
                     if (rowZip === userZip && rowArea === userArea) return true;
 
-                    // 2. 郵遞區號優先比對 + 區域模糊比對
+                    // 2. 優先郵遞區號匹配，輔以地區模糊比對
                     if (rowZip === userZip) {
+                        // 檢查報價表的地區 (如: 香山區) 是否包含在使用者抓到的完整區域 (如: 新竹市香山區) 內
                         if (userArea.includes(rowArea) || rowArea.includes(userArea)) return true;
                     }
 
@@ -928,7 +959,37 @@
                 remarks: document.getElementById('remarks').value
             };
             try {
-                await fetch(GAS_URL, { method: 'POST', body: JSON.stringify(payload), headers: { 'Content-Type': 'text/plain;charset=utf-8' } });
+                // 發送到儲存腳本
+                await fetch(GAS_URL, { 
+                    method: 'POST', 
+                    body: JSON.stringify({
+                        action: 'addReservation',
+                        data: {
+                            reservationId: payload.orderId,
+                            timestamp: new Date().toLocaleString('zh-TW', {timeZone: 'Asia/Taipei'}),
+                            name: payload.ordererName,
+                            title: document.getElementById('ordererTitle').value,
+                            phone: payload.ordererPhone,
+                            email: document.getElementById('email').value,
+                            paxInfo: payload.paxName + (document.getElementById('paxTitle').value) + " / " + payload.paxPhone,
+                            date: payload.rideDate,
+                            time: payload.rideTime,
+                            serviceType: document.getElementById('rideType').value,
+                            airport: payload.airport,
+                            flightNumber: document.getElementById('flightNo').value,
+                            mainAddressFull: payload.address,
+                            extraAddressFull: payload.extraStop,
+                            carType: payload.carType,
+                            passengers: `大${document.getElementById('paxAdult').value} 中${document.getElementById('paxChild').value} 小${document.getElementById('paxInfant').value}`,
+                            luggage: `登機${document.getElementById('luggageCarry').value} 托運${document.getElementById('luggageChecked').value} / 胖胖箱:${payload.sportLuggage}`,
+                            totalFee: payload.totalEst,
+                            payment: payload.payment,
+                            remarks: payload.remarks + (payload.surcharge ? "\n加價項目: " + payload.surcharge : "")
+                        }
+                    }), 
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' } 
+                });
+
                 if (liff.isInClient()) { 
                     const msg1 = `【安星租車 預約明細】\n預約編號：${payload.orderId}\n乘車時間：${payload.rideDate} ${payload.rideTime}\n行程路線：${document.getElementById('quoteRoute').innerText}\n加價項目：${payload.surcharge || '無'}\n預估車資：${payload.totalEst}`;
                     const msg2 = `您的預約資料已成功送出！\n為確保您的行程細節與權益，客服專員正在為您進行訂單核對。\n\n📌 預約注意事項：\n• 訂單確認： 須收到本公司的『預約確認回覆』後，才算正式完成預約。\n• 付款資訊： 若您選擇轉帳或刷卡結帳，客服將於確認訂單時，一併提供專屬付款連結或帳號。\n感謝您的耐心等候，我們將盡快與您聯繫。`;
