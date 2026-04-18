@@ -911,45 +911,63 @@
             e.preventDefault();
             const sameAs = document.getElementById('sameAsOrderer').checked;
             
-            // 基礎驗證
+            // 基礎公告/聲明驗證
             if (!hasReadDetails) { Swal.fire('提醒', '請點擊「詳細說明」閱讀乘車規範後方可送出', 'warning'); return; }
             if (!document.getElementById('agreeDisclaimer').checked) { Swal.fire('提醒', '【乘車注意事項】\n(同意後方可送出)', 'warning'); return; }
 
-            // 所有欄位驗證 (除了 Email 以外)
-            const req = [
-                { id: 'ordererName', n: '訂車人真實姓名' },
-                { id: 'ordererPhone', n: '訂車人聯絡電話' },
-                { id: 'userLineId', n: 'LINE ID' },
-                { id: 'rideDate', n: '乘車日期' },
-                { id: 'flightNo', n: '航班編號' },
-                { id: 'address', n: '主要詳細地址' },
-                { id: 'remarks', n: '其他備註 (若無請填無)' }
-            ];
+            // 收集所有錯誤
+            let errors = [];
 
+            // 1. 訂車人資訊
+            if (!document.getElementById('ordererName').value.trim()) errors.push("訂車人姓名");
+            if (!document.getElementById('ordererPhone').value.trim()) errors.push("訂車人聯絡電話");
+            if (!document.getElementById('userLineId').value.trim()) errors.push("LINE ID");
+
+            // 2. 乘車人資訊
             if (!sameAs) {
-                req.push({ id: 'paxName', n: '乘車人真實姓名' }, { id: 'paxPhone', n: '乘車人聯絡電話' });
+                if (!document.getElementById('paxName').value.trim()) errors.push("乘車人姓名");
+                if (!document.getElementById('paxPhone').value.trim()) errors.push("乘車人聯絡電話");
             }
 
-            // 條件式顯示欄位的驗證
+            // 3. 行程資訊
+            if (!document.getElementById('rideDate').value) errors.push("乘車日期");
+            if (!document.getElementById('flightNo').value.trim()) errors.push("航班編號");
+            if (!document.getElementById('address').value.trim()) errors.push("主要詳細地址");
+
+            // 4. 加點驗證
             if (document.getElementById('needExtraStop').checked) {
-                req.push({ id: 'extraStopAddress', n: '加點詳細地址' });
+                if (!document.getElementById('extraStopAddress').value.trim()) errors.push("加點詳細地址");
             }
-            if (document.getElementById('optSign').checked) {
-                req.push({ id: 'signContent', n: '舉牌姓名或內容' });
+
+            // 5. 幼兒座椅驗證 (4歲以下幼童強制椅子)
+            let infantCount = parseInt(document.getElementById('paxInfant').value) || 0;
+            if (infantCount > 0) {
+                let sR = parseInt(document.getElementById('seatRear').value) || 0;
+                let sF = parseInt(document.getElementById('seatForward').value) || 0;
+                let sB = parseInt(document.getElementById('seatBooster').value) || 0;
+                if ((sR + sF + sB) === 0) {
+                    errors.push("幼童安全座椅 (4歲以下必須選擇)");
+                }
             }
+
+            // 6. 胖胖箱驗證
             const sportRadio = Array.from(document.getElementsByName('sportLuggageRadio')).find(r => r.checked)?.value;
             if (sportRadio === "是") {
-                req.push({ id: 'sportLuggageSize', n: '胖胖箱吋數/大小' });
+                if (!document.getElementById('sportLuggageSize').value.trim()) errors.push("胖胖箱尺寸/大小");
             }
 
-            // 執行必填檢查
-            for (let f of req) {
-                const el = document.getElementById(f.id);
-                if (!el.value || !el.value.trim()) {
-                    Swal.fire('提醒', `請填寫「${f.n}」`, 'warning');
-                    el.focus();
-                    return;
-                }
+            // 7. 備註欄位驗證
+            if (!document.getElementById('remarks').value.trim()) errors.push("其他備註 (若無請填無)");
+
+            // 若有錯誤一次噴出
+            if (errors.length > 0) {
+                Swal.fire({
+                    title: '資料未填寫完整',
+                    html: `<div style="text-align: left; line-height: 1.8;">請完成以下項目：<br><br><span style="color: #f07cad; font-weight: bold;">${errors.map((err, idx) => `${idx+1}. ${err}`).join('<br>')}</span></div>`,
+                    icon: 'warning',
+                    confirmButtonColor: '#553f62'
+                });
+                return;
             }
 
             const btn = document.getElementById('submitBtn');
@@ -960,18 +978,16 @@
             if (document.getElementById('optNight').checked) surchargeArr.push('夜間加成');
             if (document.getElementById('optUrgent').checked) surchargeArr.push('急單加價');
             
-            let infantQty = parseInt(document.getElementById('paxInfant').value) || 0;
-            if (infantQty > 0) {
-                let sR = parseInt(document.getElementById('seatRear').value)||0, sF = parseInt(document.getElementById('seatForward').value)||0, sB = parseInt(document.getElementById('seatBooster').value)||0;
-                if ((sR + sF + sB) > 0) {
-                    let seatDetails = [];
-                    if (sR > 0) seatDetails.push(`後向${sR}`);
-                    if (sF > 0) seatDetails.push(`前向${sF}`);
-                    if (sB > 0) seatDetails.push(`增高墊${sB}`);
-                    surchargeArr.push(`安全座椅(${seatDetails.join(', ')})`);
-                }
+            let sR = parseInt(document.getElementById('seatRear').value)||0, sF = parseInt(document.getElementById('seatForward').value)||0, sB = parseInt(document.getElementById('seatBooster').value)||0;
+            if ((sR + sF + sB) > 0) {
+                let seatDetails = [];
+                if (sR > 0) seatDetails.push(`後向${sR}`);
+                if (sF > 0) seatDetails.push(`前向${sF}`);
+                if (sB > 0) seatDetails.push(`增高墊${sB}`);
+                surchargeArr.push(`安全座椅(${seatDetails.join(', ')})`);
             }
 
+            // 準備提交資料
             const payload = {
                 orderId: document.getElementById('orderId').value,
                 sysLineId: document.getElementById('sysLineId').value,
@@ -982,17 +998,25 @@
                 zipcode: document.getElementById('zipcode').value,
                 address: stripTaiwan(document.getElementById('address').value),
                 rideDate: document.getElementById('rideDate').value,
+                // 強制 HH:MM 文字格式
                 rideTime: `${document.getElementById('rideHour').value}:${document.getElementById('rideMinute').value}`,
                 airport: document.getElementById('airport').value,
+                flightNo: document.getElementById('flightNo').value.toUpperCase(),
+                rideType: document.getElementById('rideType').value,
                 carType: document.getElementById('carType').value,
                 payment: document.getElementById('payment').value,
-                basicFare: basicFare > 0 ? basicFare : "待報價",
+                paxAdult: document.getElementById('paxAdult').value,
+                paxChild: document.getElementById('paxChild').value,
+                paxInfant: document.getElementById('paxInfant').value,
+                lugCarry: document.getElementById('luggageCarry').value,
+                lugChecked: document.getElementById('luggageChecked').value,
                 totalEst: document.getElementById('quoteTotal').innerText,
                 sportLuggage: (sportRadio === "是") ? `有(${document.getElementById('sportLuggageQty').value}件, ${document.getElementById('sportLuggageSize').value})` : '無',
                 extraStop: document.getElementById('needExtraStop').checked ? stripTaiwan(document.getElementById('extraStopAddress').value) : '',
                 surcharge: surchargeArr.join(', '),
                 remarks: document.getElementById('remarks').value
             };
+
             try {
                 await fetch(GAS_URL, { 
                     method: 'POST', 
@@ -1007,15 +1031,15 @@
                             email: document.getElementById('email').value,
                             paxInfo: payload.paxName + (document.getElementById('paxTitle').value) + " / " + payload.paxPhone,
                             date: payload.rideDate,
-                            time: payload.rideTime,
-                            serviceType: document.getElementById('rideType').value,
+                            time: payload.rideTime, // 此處即為 HH:MM 格式
+                            serviceType: payload.rideType,
                             airport: payload.airport,
-                            flightNumber: document.getElementById('flightNo').value,
+                            flightNumber: payload.flightNo,
                             mainAddressFull: payload.address,
                             extraAddressFull: payload.extraStop,
                             carType: payload.carType,
-                            passengers: `大${document.getElementById('paxAdult').value} 中${document.getElementById('paxChild').value} 小${document.getElementById('paxInfant').value}`,
-                            luggage: `登機${document.getElementById('luggageCarry').value} 托運${document.getElementById('luggageChecked').value} / 胖胖箱:${payload.sportLuggage}`,
+                            passengers: `大${payload.paxAdult} 中${payload.paxChild} 小${payload.paxInfant}`,
+                            luggage: `登機${payload.lugCarry} 托運${payload.lugChecked} / 胖胖箱:${payload.sportLuggage}`,
                             totalFee: payload.totalEst,
                             payment: payload.payment,
                             remarks: payload.remarks + (payload.surcharge ? "\n加價項目: " + payload.surcharge : "")
@@ -1025,12 +1049,33 @@
                 });
 
                 if (liff.isInClient()) { 
-                    const msg1 = `【安星租車 預約明細】\n預約編號：${payload.orderId}\n乘車時間：${payload.rideDate} ${payload.rideTime}\n行程路線：${document.getElementById('quoteRoute').innerText}\n加價項目：${payload.surcharge || '無'}\n預估車資：${payload.totalEst}`;
+                    const msg1 = `【安星租車 預約單明細】
+預約編號：${payload.orderId}
+乘車人姓名：${payload.paxName}${document.getElementById('paxTitle').value}
+乘車人電話：${payload.paxPhone}
+接送地址：${payload.address}
+${payload.extraStop ? '加點地址：' + payload.extraStop : ''}
+乘車日期：${payload.rideDate}
+乘車時間：${payload.rideTime}
+預約類型：${payload.rideType}
+接送機場：${payload.airport}
+航班編號：${payload.flightNo}
+預約車型：${payload.carType}
+乘車人數：大人:${payload.paxAdult}, 小孩:${payload.paxChild}, 幼兒:${payload.paxInfant}
+行李件數：登機箱:${payload.lugCarry}, 託運:${payload.lugChecked}
+報價金額：${payload.totalEst}
+付款方式：${payload.payment}
+備註：${payload.remarks || '無'}${payload.surcharge ? ' (' + payload.surcharge + ')' : ''}`;
+
                     const msg2 = `您的預約資料已成功送出！\n為確保您的行程細節與權益，客服專員正在為您進行訂單核對。\n\n📌 預約注意事項：\n• 訂單確認： 須收到本公司的『預約確認回覆』後，才算正式完成預約。\n• 付款資訊： 若您選擇轉帳或刷卡結帳，客服將於確認訂單時，一併提供專屬付款連結或帳號。\n感謝您的耐心等候，我們將盡快與您聯繫。`;
-                    await liff.sendMessages([{ type: 'text', text: msg1 }, { type: 'text', text: msg2 }]); 
+                    
+                    await liff.sendMessages([{ type: 'text', text: msg1.replace(/\n\s*\n/g, '\n') }, { type: 'text', text: msg2 }]); 
                 }
                 Swal.fire({ title: '已成功送出', text: '請等候客服確認。', icon: 'success' }).then(() => { if(liff.isInClient()) liff.closeWindow(); else window.location.reload(); });
-            } catch (err) { Swal.fire('錯誤', '傳送失敗，請電洽客服。', 'error'); btn.disabled = false; btn.innerText = '確認送出預約'; }
+            } catch (err) { 
+                Swal.fire('錯誤', '傳送失敗，請電洽客服。', 'error'); 
+                btn.disabled = false; btn.innerText = '確認送出預約'; 
+            }
         });
 
         window.onload = () => { initFormOptions(); initializeLiff(); };
