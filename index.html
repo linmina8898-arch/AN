@@ -752,7 +752,7 @@
                 const rideDateTime = new Date(`${rideDateEl.value}T${rideHourVal}:${rideMinVal}:00`);
                 const diffHours = (rideDateTime - now) / (1000 * 60 * 60);
 
-                if (diffHours < 24 && diffHours > -1) { // 考慮到時差或細微誤差，設定為 > -1
+                if (diffHours < 24) { 
                     Swal.fire({
                         title: '無法線上預約',
                         html: `<div style="text-align: left; line-height: 1.6;">線上預約需於出發前 24 小時完成。<br><br><span style="color: #f07cad; font-weight: bold;">【緊急叫車】</span>請直撥客服專線：<div style="text-align: center; margin-top: 15px;"><a href="tel:0955311306" style="color: #f07cad; font-size: 26px; font-weight: bold; text-decoration: none; display: inline-block; padding: 5px 15px; border: 2px solid #f07cad; border-radius: 25px;">0955-311-306</a></div></div>`,
@@ -761,10 +761,10 @@
                     });
                     rideDateEl.value = "";
                     rideDateEl.type = "text";
-                    return; // 終止後續計算
+                    return; 
                 }
 
-                // 更新急單勾選
+                // 更新急單勾選 (24~48H)
                 const optUrgent = document.getElementById('optUrgent');
                 const lblUrgent = document.getElementById('lblUrgent');
                 if (diffHours >= 24 && diffHours <= 48) {
@@ -802,7 +802,7 @@
 
             const carType = document.getElementById('carType').value;
             
-            // 行程路線顯示：使用完整的「區碼及區域」
+            // --- 行程路線顯示：使用完整的「區碼及區域」且處理接機反轉 ---
             const areaDisplay = fullZipInfo || "地區";
             if (rideType === "送機") {
                 document.getElementById('quoteRoute').innerText = `${areaDisplay} → ${airport}`;
@@ -818,6 +818,7 @@
             let fareDisplay = "客服人工確認報價";
             
             if (mainZip && airport && priceTable.length > 0) {
+                // 1. 查找主地址價格
                 const matchMain = findMatchedFare(mainZip, mainArea, airport);
                 let mainPrice = 0;
                 if (matchMain) {
@@ -826,6 +827,7 @@
                     else mainPrice = parseInt(matchMain.f) || 0;
                 }
 
+                // 2. 如果有加點，比對加點地址價格
                 let finalBasePrice = mainPrice;
                 if (needExtraStop && extraZip) {
                     const matchExtra = findMatchedFare(extraZip, extraArea, airport);
@@ -834,6 +836,8 @@
                         if (carType === '小車') extraPrice = parseInt(matchExtra.d) || 0;
                         else if (carType === '大車') extraPrice = parseInt(matchExtra.e) || 0;
                         else extraPrice = parseInt(matchExtra.f) || 0;
+                        
+                        // 取價高者
                         finalBasePrice = Math.max(mainPrice, extraPrice);
                     }
                 }
@@ -977,7 +981,7 @@
                             carType: payload.carType,
                             passengers: `大${document.getElementById('paxAdult').value} 中${document.getElementById('paxChild').value} 小${document.getElementById('paxInfant').value}`,
                             luggage: `登機${document.getElementById('luggageCarry').value} 托運${document.getElementById('luggageChecked').value} / 胖胖箱:${payload.sportLuggage}`,
-                            totalFee: payload.totalEst,
+                            totalFee: payload.totalFee,
                             payment: payload.payment,
                             remarks: payload.remarks + (payload.surcharge ? "\n加價項目: " + payload.surcharge : "")
                         }
@@ -994,7 +998,7 @@
             } catch (err) { Swal.fire('錯誤', '傳送失敗，請電洽客服。', 'error'); btn.disabled = false; btn.innerText = '確認送出預約'; }
         });
 
-            window.onload = () => { initFormOptions(); initializeLiff(); };
+        window.onload = () => { initFormOptions(); initializeLiff(); };
     </script>
 </body>
 </html>
