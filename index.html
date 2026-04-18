@@ -7,6 +7,7 @@
   
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
   
   <style>
     .justify-text { text-align: justify; text-justify: inter-ideograph; }
@@ -24,14 +25,12 @@
 </head>
 <body class="bg-[#e9e7ef] text-black font-sans">
   
-  <!-- LINE 成功過場 -->
   <div id="view-done" class="hidden-block min-h-screen bg-[#553f62] flex-col items-center justify-center text-white text-center p-6">
      <svg class="w-20 h-20 mb-4 animate-pulse mx-auto" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
      <h2 class="text-2xl font-black tracking-widest">預約已送出</h2>
      <p class="mt-4 font-bold opacity-90">正在發送預約明細至 LINE 聊天室...</p>
   </div>
 
-  <!-- 外部瀏覽器成功畫面 -->
   <div id="view-success" class="hidden-block pb-10 text-[#222] min-h-screen bg-[#e9e7ef] flex-col">
     <header class="bg-[#553f62] text-white p-4 sticky top-0 z-50 shadow-md flex justify-center items-center text-center">
       <h1 class="text-xl font-bold tracking-wider uppercase">預約完成</h1>
@@ -53,7 +52,6 @@
     </main>
   </div>
 
-  <!-- 主表單區域 -->
   <div id="view-form" class="pb-10 text-[#222]">
     <header class="bg-[#553f62] text-white p-4 sticky top-0 z-50 shadow-md flex justify-center items-center text-center">
       <h1 class="text-xl font-bold tracking-wider uppercase">安星租車預約/詢價 系統</h1>
@@ -65,13 +63,11 @@
     <main class="max-w-md mx-auto mt-6 bg-white shadow-lg p-6 sm:p-8 sm:border border-gray-200">
       <form id="reservation-form" class="space-y-6">
         
-        <!-- 預約編號 -->
         <div class="bg-[#553f62]/5 p-3 flex justify-between items-center border border-[#553f62]/20">
           <span class="text-sm font-bold text-[#553f62] flex items-center gap-2"><svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><line x1="10" y1="9" x2="8" y2="9"/></svg> 預約編號</span>
           <span id="display-reservationId" class="font-mono text-sm font-bold text-[#553f62]"></span>
         </div>
 
-        <!-- 乘車人資訊 -->
         <section class="space-y-4">
           <h2 class="text-lg font-bold border-b-2 border-[#553f62] pb-2 text-[#553f62]">乘車人資訊</h2>
           <div class="flex gap-2">
@@ -108,7 +104,6 @@
           </div>
         </section>
 
-        <!-- 乘車資訊 -->
         <section class="space-y-4">
           <h2 class="text-lg font-bold border-b-2 border-[#553f62] pb-2 flex items-center gap-2 mt-8 text-[#553f62]">
             <svg class="w-5 h-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg> 乘車資訊
@@ -133,7 +128,6 @@
           <input type="text" id="flightNumber" class="w-full p-3 border uppercase font-mono rounded-sm outline-none focus:border-[#553f62] bg-white text-base" placeholder="航班編號 EX: BR123">
         </section>
 
-        <!-- 車型與人數行李 -->
         <section class="space-y-4">
           <h2 class="text-lg font-bold border-b-2 border-[#553f62] pb-2 flex items-start gap-2 mt-8 text-[#553f62]">
             <svg class="w-5 h-5 mt-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 16H9m10 0h3v-3.15a1 1 0 0 0-.84-.99L16 11l-2.7-3.6a2 2 0 0 0-1.6-.8H8.3a2 2 0 0 0-1.6.8L4 11l-5.16.86a1 1 0 0 0-.84.99V16h3m10 0a2 2 0 1 0-4 0m-6 0a2 2 0 1 0-4 0"/></svg>
@@ -157,7 +151,6 @@
           </div>
         </section>
 
-        <!-- 費用報價明細 -->
         <section class="space-y-4">
           <h2 class="text-lg font-bold border-b-2 border-[#553f62] pb-2 flex items-center gap-2 mt-8 text-[#553f62]">
             <svg class="w-5 h-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg> 費用報價
@@ -180,7 +173,6 @@
             <input type="text" id="signboardText" class="w-full mt-2 p-3 border rounded-sm outline-none focus:border-[#553f62] bg-white text-base hidden-block" placeholder="輸入舉牌內容">
           </div>
 
-          <!-- 報價單視覺區 -->
           <div class="bg-[#553f62] text-white p-6 border-t-8 border-white/20 rounded-sm shadow-xl font-mono">
             <h3 class="text-sm font-black border-b border-white/20 pb-2 mb-4 flex items-center gap-2 uppercase tracking-widest">報價明細內容</h3>
             <div class="space-y-4">
@@ -203,7 +195,6 @@
           </div>
         </section>
 
-        <!-- 其他備註 -->
         <section class="space-y-4">
           <h2 class="text-lg font-bold border-b-2 border-[#553f62] pb-2 flex items-center gap-2 mt-8 text-[#553f62]">
             <svg class="w-5 h-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg> 其他備註
@@ -214,7 +205,6 @@
           <textarea id="userRemarks" rows="3" class="w-full p-3 border rounded-sm outline-none focus:border-[#553f62] bg-white text-base" placeholder="請在此輸入您的備註或特殊需求..."></textarea>
         </section>
 
-        <!-- 注意事項 -->
         <section class="mt-8 border-t-2 border-[#553f62] pt-6 pb-4 font-bold text-gray-800">
           <div class="bg-[#553f62]/5 p-4 h-80 overflow-y-auto text-xs leading-relaxed justify-text border border-[#553f62]/20 rounded-sm shadow-inner text-justify">
             <h3 class="font-bold text-[#553f62] mb-3 flex items-center gap-1 text-sm">【乘車注意事項】</h3>
@@ -240,6 +230,7 @@
     const GAS_WEBAPP_URL = 'https://script.google.com/macros/s/AKfycbzuCbw2kK7Mgn2AZa1NWGUXIHMhZwSPV51Wh6DwulHPjuz8E8EwIuBprYigMVMIEP4s/exec';
     const GOOGLE_MAPS_API_KEY = 'AIzaSyAxYym5ZR8puPb0iiycHdwzTJTKH0Aears';
     const LINE_LIFF_ID = '2009792282-1qTp0cNm';
+    const LINE_ADD_FRIEND_URL = 'https://lin.ee/OtcBlEo';
 
     const state = {
       reservationId: '', name: '', title: '先生', phone: '', email: '', district: '', address: '',
@@ -275,7 +266,31 @@
       return `AS${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}${Math.random().toString(36).substring(2, 5).toUpperCase()}`;
     }
 
-    // --- 智慧報價與計費 (優化為積分權重制，解決香山與新竹市衝突) ---
+    // --- LINE 好友狀態檢查邏輯 ---
+    async function checkFriendship() {
+      if (window.liff && liff.isInClient()) {
+        try {
+          const status = await liff.getFriendshipStatus();
+          if (!status.friendFlag) {
+            await Swal.fire({
+              title: '請先加入好友',
+              text: '為了確保您能接收預約通知與明細，請先加入安星租車官方帳號。',
+              icon: 'info',
+              confirmButtonText: '前往加入好友',
+              confirmButtonColor: '#553f62',
+              allowOutsideClick: false
+            });
+            window.location.href = LINE_ADD_FRIEND_URL;
+            return false;
+          }
+        } catch (err) {
+          console.error('檢查好友狀態失敗', err);
+        }
+      }
+      return true;
+    }
+
+    // --- 報價演算法 ---
     function findPriceData(airport, locString) {
       if (!locString || Object.keys(state.priceMap).length === 0) return null;
       const aptPrefix = airport.replace('機場','');
@@ -301,20 +316,18 @@
 
       const targets = available.map(x => {
         let score = 0;
-        if (x.norm === userNorm) score += 1000; // 完全精確吻合，最高分
-        if (userZip && x.zip === userZip) score += 100; // 郵遞區號吻合
-        
+        if (x.norm === userNorm) score += 1000;
+        if (userZip && x.zip === userZip) score += 100;
         const cleanXText = x.text.replace(/區|鄉|鎮|市|縣/g, '');
         if (cleanUserArea && cleanXText && (cleanXText.includes(cleanUserArea) || cleanUserArea.includes(cleanXText))) {
-          score += 500; // 行政區名稱直接命中 (例如: 香山區 配 香山)
+          score += 500;
         } else if (cleanXText && userNorm.includes(cleanXText)) {
-          score += 10 * cleanXText.length; // 模糊包含，依照字數給權重 (例如: 新竹市)
+          score += 10 * cleanXText.length;
         }
         return { ...x, score };
       }).filter(x => x.score > 0);
 
       if (targets.length > 0) {
-        // 分數高優先，同分則取長度長(更詳細)
         targets.sort((a, b) => b.score - a.score || b.text.length - a.text.length); 
         return state.priceMap[targets[0].key];
       }
@@ -390,7 +403,6 @@
       });
     }
 
-    // --- 地圖、價格、LIFF 初始化 ---
     function initGoogleMaps() {
       const parse = (place, dId, aId) => {
         const comps = place.address_components || [];
@@ -438,15 +450,25 @@
       } catch(e) { console.warn('報價載入失敗'); }
     }
 
-    window.onload = () => {
+    // --- 頁面啟動 ---
+    window.onload = async () => {
       state.reservationId = generateId();
       DOM.displayId.innerText = state.reservationId;
       for(let i=0; i<24; i++) DOM.timeHour.add(new Option(String(i).padStart(2,'0'), String(i).padStart(2,'0')));
       for(let i=0; i<12; i++) DOM.timeMinute.add(new Option(String(i*5).padStart(2,'0'), String(i*5).padStart(2,'0')));
       DOM.timeHour.value = "12"; DOM.timeMinute.value = "00";
+      
       loadPrices();
       initGoogleMaps();
-      if(typeof liff !== 'undefined') liff.init({ liffId: LINE_LIFF_ID });
+
+      if(typeof liff !== 'undefined') {
+        try {
+          await liff.init({ liffId: LINE_LIFF_ID });
+          if (liff.isLoggedIn()) {
+             await checkFriendship(); // 進入頁面即檢查好友
+          }
+        } catch(err) { console.error('LIFF 初始化失敗', err); }
+      }
     };
 
     function updateOptions() {
@@ -479,16 +501,25 @@
     DOM.hasExtraPoint.onchange = (e) => { state.hasExtraPoint = e.target.checked; DOM.extraPointBlock.className = e.target.checked ? 'mt-4 space-y-2' : 'hidden-block'; updateExtraDistance(); };
     document.getElementById('userRemarks').oninput = (e) => { state.userRemarks = e.target.value; };
 
+    // --- 提交預約單 ---
     document.getElementById('reservation-form').onsubmit = async (e) => {
       e.preventDefault();
+      
       if (!state.name || state.phone.length < 10 || !state.district) return Swal.fire('資訊不完整','請填寫全名、電話(10碼)與地址','error');
       if (!document.getElementById('agreed').checked) return Swal.fire('提醒','請勾選同意條款','info');
+      
+      // 提交前再次複檢好友狀態
+      const isFriend = await checkFriendship();
+      if (!isFriend) return;
+
       DOM.submitBtn.disabled = true; DOM.submitBtn.innerText = "傳送中...";
       const total = DOM.displayTotal.innerText;
       const msg = `【預約單】\n編號：${state.reservationId}\n全名：${state.name} ${state.title}\n電話：${state.phone}\n日期：${state.date} ${state.timeHour}:${state.timeMinute}\n行程：${state.serviceType} (${state.airport})\n地點：${state.district} ${state.address}\n車型：${state.carType}\n總額：${total}\n付款：${state.payment}`;
       const second = `您的預約已成功送出。\n請您耐心等候，待客服人員為您確認訂單內容無誤後，將回傳轉帳帳號／刷卡QR Code以利完成付款，感謝您的配合。`;
+      
       try {
         await fetch(GAS_WEBAPP_URL, { method:'POST', mode:'no-cors', body:JSON.stringify({ action:'addReservation', data: { ...state, totalFee: total, timestamp: new Date().toLocaleString(), mainAddressFull: `${state.district} ${state.address}`, extraAddressFull: state.hasExtraPoint ? `${state.extraDistrict} ${state.extraAddress}` : '無' } })});
+        
         if (window.liff && liff.isInClient()) {
           await liff.sendMessages([{type:'text', text:msg}, {type:'text', text:second}]);
           document.getElementById('view-form').classList.add('hidden-block');
@@ -499,7 +530,11 @@
           document.getElementById('view-success').classList.remove('hidden-block');
           document.getElementById('fallback-message').innerText = msg;
         }
-      } catch(err) { Swal.fire('傳送失敗','請重試','error'); DOM.submitBtn.disabled = false; DOM.submitBtn.innerText = "確認預約並送出"; }
+      } catch(err) { 
+        Swal.fire('傳送失敗','請重試','error'); 
+        DOM.submitBtn.disabled = false; 
+        DOM.submitBtn.innerText = "確認預約並送出"; 
+      }
     };
     updateOptions();
   </script>
