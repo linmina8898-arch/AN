@@ -428,7 +428,7 @@
             return str.replace(/台灣/g, "").trim();
         }
 
-        // --- 核心優化：更精準的台灣地區解析 (郵遞區號 + 縣市 + 鄉鎮市區) ---
+        // --- 核心優化：更精準的台灣地區解析 ---
         function parseZoneInfo(place) {
             let zip = '', city = '', dist = '';
             if (place && place.address_components) {
@@ -456,10 +456,9 @@
             return res.trim();
         }
 
-        // --- 抓取報價表資料 (關鍵修正：加上 action 參數並優化 fetch) ---
+        // --- 抓取報價表資料 ---
         async function fetchPriceTable() {
             try {
-                // 加上 ?action=getPrices 以利 GAS 判斷動作，並加上時間戳防止快取
                 const url = `${GAS_URL}?action=getPrices&t=${Date.now()}`;
                 const response = await fetch(url, { method: 'GET', redirect: 'follow' });
                 if (!response.ok) throw new Error('Network error');
@@ -467,11 +466,36 @@
                 if (data && Array.isArray(data)) {
                     priceTable = data;
                     console.log("報價資料庫已更新，共 " + priceTable.length + " 筆");
-                    updateLogic(); // 抓到資料後立即更新一次報價明細
+                    updateLogic(); // 抓到資料後立即執行一次試算
                 }
             } catch (err) { 
                 console.error("報價讀取失敗:", err); 
             }
+        }
+
+        // --- 核心邏輯：從報價表中尋找匹配項 (優化比對彈性) ---
+        function findMatchedFare(userZip, userArea, airport) {
+            if (!priceTable || priceTable.length === 0) return null;
+            
+            const searchAirport = airport.substring(0, 2); // 例如 "桃園"
+            // 處理 Google 抓到的 5 碼郵遞區號轉 3 碼
+            const cleanUserZip = userZip.substring(0, 3);
+            const cleanUserArea = userArea.replace(/\s+/g, '');
+
+            return priceTable.find(item => {
+                const rowAirport = String(item.a || "").trim();
+                const rowZip = String(item.b || "").trim().substring(0, 3);
+                const rowArea = String(item.c || "").trim().replace(/\s+/g, '');
+
+                if (!rowAirport.includes(searchAirport)) return false;
+
+                // 1. 優先匹配郵遞區號
+                if (rowZip === cleanUserZip) {
+                    // 2. 如果郵遞區號相同，檢查地區是否模糊匹配 (例如 "香山區" 在 "新竹市香山區" 內)
+                    if (cleanUserArea.includes(rowArea) || rowArea.includes(cleanUserArea) || !rowArea) return true;
+                }
+                return false;
+            });
         }
 
         // --- 產生預約編號 ---
@@ -503,7 +527,7 @@
             setupSyncLogic();
             setupDetailsToggle();
             
-            // 非同步抓取報價表
+            // 執行資料抓取
             fetchPriceTable();
             updateLogic(); 
         }
@@ -791,31 +815,18 @@
             document.getElementById('quoteCarType').innerText = carType;
             document.getElementById('quotePayment').innerText = document.getElementById('payment').value;
 
-            // --- 基本車資比對邏輯修正 ---
+            // --- 基本車資比對與計算 (優化時機與精確度) ---
             basicFare = 0;
             let fareDisplay = "客服人工確認報價";
-            if (userZip && airport && priceTable.length > 0) {
-                const searchAirport = airport.substring(0, 2); 
-                
-                let match = priceTable.find(item => {
-                    const rowAirport = String(item.a || "").trim();
-                    const rowZip = String(item.b || "").trim();
-                    const rowArea = String(item.c || "").trim();
-
-                    if (!rowAirport.includes(searchAirport)) return false;
-
-                    // 1. 郵遞區號精準比對
-                    if (rowZip === userZip) {
-                        // 2. 地區模糊比對 (處理「香山區」與「新竹市香山區」的差異)
-                        if (userArea.includes(rowArea) || rowArea.includes(userArea) || !rowArea) return true;
-                    }
-                    return false;
-                });
+            
+            if (userZip && airport && priceTable && priceTable.length > 0) {
+                const match = findMatchedFare(userZip, userArea, airport);
 
                 if (match) {
                     if (carType === '小車') basicFare = parseInt(match.d) || 0;
                     else if (carType === '大車') basicFare = parseInt(match.e) || 0;
                     else basicFare = parseInt(match.f) || 0;
+                    
                     if (basicFare > 0) fareDisplay = `$${basicFare}`;
                 }
             }
