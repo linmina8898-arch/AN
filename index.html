@@ -752,7 +752,8 @@
                 }
             });
 
-            document.getElementById('extraStopContainer').style.display = document.getElementById('needExtraStop').checked ? 'block' : 'none';
+            const needExtraStop = document.getElementById('needExtraStop').checked;
+            document.getElementById('extraStopContainer').style.display = needExtraStop ? 'block' : 'none';
             document.getElementById('signContentContainer').style.display = document.getElementById('optSign').checked ? 'block' : 'none';
             let selectedSport = Array.from(document.getElementsByName('sportLuggageRadio')).find(r => r.checked)?.value;
             document.getElementById('sportLuggageContainer').style.display = (selectedSport === "是") ? 'block' : 'none';
@@ -802,41 +803,76 @@
             const rideType = document.getElementById('rideType').value;
             const airport = document.getElementById('airport').value;
             const fullZipInfo = document.getElementById('zipcode').value; 
+            const extraZipInfo = document.getElementById('extraZipcode').value;
 
-            const zipParts = fullZipInfo.split(' ');
-            const userZip = zipParts[0] ? zipParts[0].trim() : '';
-            const userArea = zipParts.slice(1).join('').trim(); 
+            // 拆解主地址與加點地址的資訊
+            const mainParts = fullZipInfo.split(' ');
+            const mainZip = mainParts[0] ? mainParts[0].trim() : '';
+            const mainArea = mainParts.slice(1).join('').trim();
+
+            const extraParts = extraZipInfo.split(' ');
+            const extraZip = extraParts[0] ? extraParts[0].trim() : '';
+            const extraArea = extraParts.slice(1).join('').trim();
 
             const carType = document.getElementById('carType').value;
-            const addressVal = document.getElementById('address').value;
-            const areaDisplay = addressVal ? addressVal.substring(0, 3) : "地區";
+            
+            // 行程路線顯示優化：使用完整的「區碼及區域」
+            const areaDisplay = fullZipInfo || "地區";
+            if (rideType === "送機") {
+                document.getElementById('quoteRoute').innerText = `${areaDisplay} → ${airport}`;
+            } else {
+                document.getElementById('quoteRoute').innerText = `${airport} → ${areaDisplay}`;
+            }
 
-            document.getElementById('quoteRoute').innerText = rideType === "送機" ? `${areaDisplay} → ${airport}` : `${airport} → ${areaDisplay}`;
             document.getElementById('quoteCarType').innerText = carType;
             document.getElementById('quotePayment').innerText = document.getElementById('payment').value;
 
-            // --- 基本車資比對與計算 (優化時機與精確度) ---
+            // --- 基本車資計算 (優化：如有加點，以價高者報價) ---
             basicFare = 0;
             let fareDisplay = "客服人工確認報價";
             
-            if (userZip && airport && priceTable && priceTable.length > 0) {
-                const match = findMatchedFare(userZip, userArea, airport);
+            if (mainZip && airport && priceTable && priceTable.length > 0) {
+                // 1. 查找主地址價格
+                const matchMain = findMatchedFare(mainZip, mainArea, airport);
+                let mainPrice = 0;
+                if (matchMain) {
+                    if (carType === '小車') mainPrice = parseInt(matchMain.d) || 0;
+                    else if (carType === '大車') mainPrice = parseInt(matchMain.e) || 0;
+                    else mainPrice = parseInt(matchMain.f) || 0;
+                }
 
-                if (match) {
-                    if (carType === '小車') basicFare = parseInt(match.d) || 0;
-                    else if (carType === '大車') basicFare = parseInt(match.e) || 0;
-                    else basicFare = parseInt(match.f) || 0;
-                    
-                    if (basicFare > 0) fareDisplay = `$${basicFare}`;
+                // 2. 如果有加點，查找加點價格並取最高者
+                let finalBasePrice = mainPrice;
+                if (needExtraStop && extraZip) {
+                    const matchExtra = findMatchedFare(extraZip, extraArea, airport);
+                    if (matchExtra) {
+                        let extraPrice = 0;
+                        if (carType === '小車') extraPrice = parseInt(matchExtra.d) || 0;
+                        else if (carType === '大車') extraPrice = parseInt(matchExtra.e) || 0;
+                        else extraPrice = parseInt(matchExtra.f) || 0;
+                        
+                        // 取兩者中最高者作為基本報價
+                        finalBasePrice = Math.max(mainPrice, extraPrice);
+                    } else if (mainPrice > 0) {
+                        // 如果加點地址沒對到但主地址有對到，暫時以主地址為主，或可設為人工報價
+                        finalBasePrice = mainPrice;
+                    } else {
+                        finalBasePrice = 0;
+                    }
+                }
+
+                basicFare = finalBasePrice;
+                if (basicFare > 0) {
+                    fareDisplay = `$${basicFare}`;
                 }
             }
             document.getElementById('quoteBasePrice').innerText = fareDisplay;
 
             let quoteHtml = '', totalSurcharge = 0;
             if (rideType === '接機') { quoteHtml += `<div class="flex justify-between"><span>└ 接機服務費</span><span>+$200</span></div>`; totalSurcharge += 200; }
-            if (document.getElementById('needExtraStop').checked) {
+            if (needExtraStop) {
                 if (extraStopFee > 0) { 
-                    quoteHtml += `<div class="flex justify-between items-center"><span>└ 加點服務 <span class="text-[10px] text-[#e9e7ef]/60">(${extraStopDist.toFixed(1)}公里)</span></span><span>+$${extraStopFee}</span></div>`; 
+                    quoteHtml += `<div class="flex justify-between items-center"><span>└ 加點服務費 <span class="text-[10px] text-[#e9e7ef]/60">(${extraStopDist.toFixed(1)}公里)</span></span><span>+$${extraStopFee}</span></div>`; 
                     totalSurcharge += extraStopFee; 
                 } else if (extraStopFee === -1) { quoteHtml += `<div class="flex justify-between"><span class="text-[#e9e7ef]/70 italic">└ 加點(客服人工報價)</span></div>`; }
             }
