@@ -384,7 +384,7 @@
                         <div class="space-y-4 text-xs text-gray-700 leading-relaxed border-l-2 border-primary/20 pl-4 mb-4 text-justify">
                             <p><strong>臨時加點：</strong> 司機無法私自增加停靠點(車輛皆有GPS）。如需臨時加點，請告知司機回報公司後方可執行。</p>
                             <p><strong>預約車型：</strong> 請務必依「實際乘車人數」與「行李件數尺寸」預約合適車款。以免當天車輛乘載不下擔誤貴賓寶貴的時間。</p>
-                            <p><strong>行李與乘車規範：</strong> 全程請繫妥安全帶，座位及腳踏區僅限放隨身背包。若現場行李過多不符預約車型，公司有權拒載，且該趟行程恕不退費。</p>
+                            <p><strong>行李與乘車規範：</strong> 全程請繫妥安全帶，座位及腳踏區僅限放隨身背包。若現場行李過過多不符預約車型，公司有權拒載，且該趟行程恕不退費。</p>
                             <p><strong>車內禁食：</strong> 為維護乘車品質，顧及每位貴賓權益，車內全面禁止飲食、吸菸（包含電子菸、加熱菸）、吃檳榔。</p>
                             <p><strong>兒童安全座椅：</strong> 0~12歲（18公斤內）嬰幼兒依法須使用安全座椅。若未依需求加購導致違規，相關罰款將由乘客自行負擔。</p>
                         </div>
@@ -413,7 +413,7 @@
         // --- 設定常數 ---
         const LIFF_ID = "2009827083-SPSbrR9a";
         const LINE_OA_LINK = "https://line.me/R/ti/p/@220ewdah";
-        const GAS_URL = "https://script.google.com/macros/s/AKfycbzOrykDeXF3R-zYzn0bVik4HQKAAWNhebAzNc4psRf45j7vRx8NF0N9gsy1fFPMyluG/exec"; 
+        const GAS_URL = "https://script.google.com/macros/s/AKfycbxkfZPc2vK7tPe2pvPgXqg-xAAGufVmHWhvDCKZl6QYKzLgfULwIj98UixMy8OAGB9z/exec"; 
 
         let extraStopFee = 0;
         let extraStopDist = 0;
@@ -761,10 +761,10 @@
                     });
                     rideDateEl.value = "";
                     rideDateEl.type = "text";
-                    return; // 終止後續計算，強迫重新選
+                    return; 
                 }
 
-                // 急單標註 (24~48H)
+                // 更新急單標註 (24~48H)
                 const optUrgent = document.getElementById('optUrgent');
                 const lblUrgent = document.getElementById('lblUrgent');
                 if (diffHours >= 24 && diffHours <= 48) {
@@ -906,51 +906,30 @@
             const sameAs = document.getElementById('sameAsOrderer').checked;
             
             let errors = [];
-
-            // 1. 訂車人資訊
             if (!document.getElementById('ordererName').value.trim()) errors.push("訂車人姓名");
             if (!document.getElementById('ordererPhone').value.trim()) errors.push("訂車人聯絡電話");
             if (!document.getElementById('userLineId').value.trim()) errors.push("LINE ID");
-
-            // 2. 乘車人資訊
             if (!sameAs) {
                 if (!document.getElementById('paxName').value.trim()) errors.push("乘車人姓名");
                 if (!document.getElementById('paxPhone').value.trim()) errors.push("乘車人聯絡電話");
             }
-
-            // 3. 行程資訊
             if (!document.getElementById('rideDate').value) errors.push("乘車日期");
             if (!document.getElementById('flightNo').value.trim()) errors.push("航班編號");
             if (!document.getElementById('address').value.trim()) errors.push("主要詳細地址");
-
-            // 4. 加點驗證
-            if (document.getElementById('needExtraStop').checked) {
-                if (!document.getElementById('extraStopAddress').value.trim()) errors.push("加點詳細地址");
-            }
-
-            // 5. 幼兒座椅驗證 (4歲以下幼童強制椅子)
+            if (document.getElementById('needExtraStop').checked && !document.getElementById('extraStopAddress').value.trim()) errors.push("加點詳細地址");
+            
             let infantCount = parseInt(document.getElementById('paxInfant').value) || 0;
-            if (infantCount > 0) {
-                let sR = parseInt(document.getElementById('seatRear').value) || 0;
-                let sF = parseInt(document.getElementById('seatForward').value) || 0;
-                let sB = parseInt(document.getElementById('seatBooster').value) || 0;
-                if ((sR + sF + sB) === 0) {
-                    errors.push("幼童安全座椅 (4歲以下必須選擇)");
-                }
-            }
-
-            // 6. 胖胖箱驗證
+            let sR = parseInt(document.getElementById('seatRear').value) || 0;
+            let sF = parseInt(document.getElementById('seatForward').value) || 0;
+            let sB = parseInt(document.getElementById('seatBooster').value) || 0;
+            if (infantCount > 0 && (sR + sF + sB) === 0) errors.push("幼童安全座椅 (4歲以下必須選擇)");
+            
             const sportRadio = Array.from(document.getElementsByName('sportLuggageRadio')).find(r => r.checked)?.value;
-            if (sportRadio === "是") {
-                if (!document.getElementById('sportLuggageSize').value.trim()) errors.push("胖胖箱尺寸/大小");
-            }
-
-            // 7. 最後檢查公告與同意書 (移至最後)
-            if (!hasReadDetails) {
-                errors.push("請點擊「詳細說明」閱讀乘車規範");
-            } else if (!document.getElementById('agreeDisclaimer').checked) {
-                errors.push("請勾選同意【乘車注意事項】聲明");
-            }
+            if (sportRadio === "是" && !document.getElementById('sportLuggageSize').value.trim()) errors.push("胖胖箱尺寸/大小");
+            
+            // 最後檢查公告與同意書 (順序放在最後)
+            if (!hasReadDetails) errors.push("請點擊「詳細說明」閱讀乘車規範");
+            else if (!document.getElementById('agreeDisclaimer').checked) errors.push("請勾選同意【乘車注意事項】聲明");
 
             if (errors.length > 0) {
                 Swal.fire({
@@ -965,19 +944,18 @@
             const btn = document.getElementById('submitBtn');
             btn.disabled = true; btn.innerText = '傳送中...';
 
+            let seatDetailsStr = '無';
+            if ((sR + sF + sB) > 0) {
+                let seatsArr = [];
+                if (sR > 0) seatsArr.push(`後向${sR}`);
+                if (sF > 0) seatsArr.push(`前向${sF}`);
+                if (sB > 0) seatsArr.push(`增高墊${sB}`);
+                seatDetailsStr = seatsArr.join(', ');
+            }
+
             let surchargeArr = [];
-            if (document.getElementById('optSign').checked) surchargeArr.push(`舉牌:${document.getElementById('signContent').value}`);
             if (document.getElementById('optNight').checked) surchargeArr.push('夜間加成');
             if (document.getElementById('optUrgent').checked) surchargeArr.push('急單加價');
-            
-            let sR = parseInt(document.getElementById('seatRear').value)||0, sF = parseInt(document.getElementById('seatForward').value)||0, sB = parseInt(document.getElementById('seatBooster').value)||0;
-            if ((sR + sF + sB) > 0) {
-                let seatDetails = [];
-                if (sR > 0) seatDetails.push(`後向${sR}`);
-                if (sF > 0) seatDetails.push(`前向${sF}`);
-                if (sB > 0) seatDetails.push(`增高墊${sB}`);
-                surchargeArr.push(`安全座椅(${seatDetails.join(', ')})`);
-            }
 
             const payload = {
                 orderId: document.getElementById('orderId').value,
@@ -1005,7 +983,9 @@
                 totalEst: document.getElementById('quoteTotal').innerText,
                 sportLuggage: (sportRadio === "是") ? `有(${document.getElementById('sportLuggageQty').value}件, ${document.getElementById('sportLuggageSize').value})` : '無',
                 extraStop: document.getElementById('needExtraStop').checked ? stripTaiwan(document.getElementById('extraStopAddress').value) : '',
-                surcharge: surchargeArr.join(', '),
+                safetySeat: seatDetailsStr,
+                signboard: document.getElementById('optSign').checked ? document.getElementById('signContent').value : '無', // 舉牌獨立
+                surcharge: surchargeArr.join(', ') || '無',
                 remarks: document.getElementById('remarks').value
             };
 
@@ -1034,10 +1014,14 @@
                             extraAddressFull: payload.extraStop,
                             carType: payload.carType,
                             passengers: `大${payload.paxAdult} 中${payload.paxChild} 小${payload.paxInfant}`,
-                            luggage: `登機${payload.lugCarry} 托運${payload.lugChecked} / 胖胖箱:${payload.sportLuggage}`,
+                            luggage: `登機${payload.lugCarry} 托運${payload.lugChecked}`,
+                            sportLuggage: payload.sportLuggage, 
+                            safetySeat: payload.safetySeat,
+                            signboard: payload.signboard, // 舉牌獨立寫入 Google 表單一格
                             totalFee: payload.totalEst,
                             payment: payload.payment,
-                            remarks: (payload.remarks || '無') + (payload.surcharge ? "\n加價項目: " + payload.surcharge : "")
+                            remarks: payload.remarks || '無', 
+                            surcharge: payload.surcharge 
                         }
                     }), 
                     headers: { 'Content-Type': 'text/plain;charset=utf-8' } 
@@ -1058,12 +1042,15 @@ ${payload.extraStop ? '加點地址：' + payload.extraStop : ''}
 預約車型：${payload.carType}
 乘車人數：大人:${payload.paxAdult}, 小孩:${payload.paxChild}, 幼兒:${payload.paxInfant}
 行李件數：登機箱:${payload.lugCarry}, 託運:${payload.lugChecked}
+${payload.sportLuggage !== '無' ? '胖胖箱：' + payload.sportLuggage : ''}
+安全座椅：${payload.safetySeat}
+${payload.signboard !== '無' ? '舉牌服務：' + payload.signboard : ''}
 報價金額：${payload.totalEst}
 付款方式：${payload.payment}
-備註：${payload.remarks || '無'}${payload.surcharge ? ' (' + payload.surcharge + ')' : ''}`;
+備註：${payload.remarks || '無'}
+加價項目：${payload.surcharge}`;
 
                     const msg2 = `您的預約資料已成功送出！\n為確保您的行程細節與權益，客服專員正在為您進行訂單核對。\n\n📌 預約注意事項：\n• 訂單確認： 須收到本公司的『預約確認回覆』後，才算正式完成預約。\n• 付款資訊： 若您選擇轉帳或刷卡結帳，客服將於確認訂單時，一併提供專屬付款連結或帳號。\n感謝您的耐心等候，我們將盡快與您聯繫。`;
-                    
                     await liff.sendMessages([{ type: 'text', text: msg1.replace(/\n\s*\n/g, '\n') }, { type: 'text', text: msg2 }]); 
                 }
                 Swal.fire({ title: '已成功送出', text: '請等候客服確認。', icon: 'success' }).then(() => { if(liff.isInClient()) liff.closeWindow(); else window.location.reload(); });
@@ -1072,7 +1059,6 @@ ${payload.extraStop ? '加點地址：' + payload.extraStop : ''}
                 btn.disabled = false; btn.innerText = '確認送出預約'; 
             }
         });
-
         window.onload = () => { initFormOptions(); initializeLiff(); };
     </script>
 </body>
