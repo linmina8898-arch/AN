@@ -319,14 +319,14 @@
                                     <span>舉牌服務 (+$200)</span>
                                 </label>
                                 <div id="signContentContainer" class="hidden ml-6">
-                                    <input type="text" id="signContent" class="w-full p-2 border border-gray-300 rounded text-sm focus-primary" placeholder="請輸入舉牌姓名">
+                                    <input type="text" id="signContent" class="w-full p-2 border border-gray-300 rounded text-sm focus-primary" placeholder="請輸入舉牌姓名或內容">
                                 </div>
                             </div>
-                            <label class="flex items-center space-x-2 opacity-60">
+                            <label id="lblNight" class="flex items-center space-x-2 opacity-60 transition-opacity duration-300">
                                 <input type="checkbox" id="optNight" value="夜間加成(+$200)" class="rounded w-4 h-4 text-primary focus:ring-primary surcharge-opt quote-trigger" disabled>
                                 <span>夜間加成 (23:00~04:59) (+$200)</span>
                             </label>
-                            <label class="flex items-center space-x-2 opacity-60">
+                            <label id="lblUrgent" class="flex items-center space-x-2 opacity-60 transition-opacity duration-300">
                                 <input type="checkbox" id="optUrgent" value="急單加價(+$300)" class="rounded w-4 h-4 text-primary focus:ring-primary surcharge-opt quote-trigger" disabled>
                                 <span>急單加價 (24~48H內) (+$300)</span>
                             </label>
@@ -341,34 +341,34 @@
                 </div>
 
                 <!-- 預估報價明細 -->
-                <div class="bg-[#fff5f8] p-5 rounded-xl border border-[#f07cad] shadow-sm">
-                    <h2 class="text-lg font-bold text-[#f07cad] mb-3 flex items-center"><span class="w-1 h-5 bg-[#f07cad] mr-2 inline-block rounded"></span>預估報價明細</h2>
-                    <div class="space-y-2 text-sm text-gray-700">
-                        <div class="flex justify-between items-center pb-2 border-b border-pink-200">
-                            <span class="font-bold text-gray-600">行程路線</span>
-                            <span id="quoteRoute" class="font-bold text-[#553f62]">地區 → 機場</span>
+                <div class="bg-[#553f62] p-5 rounded-xl shadow-md text-[#e9e7ef]">
+                    <h2 class="text-lg font-bold text-[#e9e7ef] mb-3 flex items-center"><span class="w-1 h-5 bg-[#e9e7ef] mr-2 inline-block rounded opacity-80"></span>預估報價明細</h2>
+                    <div class="space-y-2 text-sm">
+                        <div class="flex justify-between items-center pb-2 border-b border-[#e9e7ef]/20">
+                            <span class="font-bold text-[#e9e7ef]/80">行程路線</span>
+                            <span id="quoteRoute" class="font-bold text-[#e9e7ef]">地區 → 機場</span>
                         </div>
-                        <div class="grid grid-cols-2 gap-x-4 py-2 border-b border-pink-50 text-xs">
+                        <div class="grid grid-cols-2 gap-x-4 py-2 border-b border-[#e9e7ef]/10 text-xs">
                             <div class="flex flex-col">
-                                <span class="text-gray-400">預約車型</span>
-                                <span id="quoteCarType" class="font-medium">大車</span>
+                                <span class="text-[#e9e7ef]/70">預約車型</span>
+                                <span id="quoteCarType" class="text-sm font-bold text-[#e9e7ef]">大車</span>
                             </div>
                             <div class="flex flex-col text-right">
-                                <span class="text-xs text-gray-400">付款方式</span>
-                                <span id="quotePayment" class="font-medium">現金</span>
+                                <span class="text-xs text-[#e9e7ef]/70">付款方式</span>
+                                <span id="quotePayment" class="text-sm font-bold text-[#e9e7ef]">現金</span>
                             </div>
                         </div>
                         <div class="flex justify-between items-center py-1">
-                            <span class="font-medium text-gray-600">基本車資</span>
-                            <span id="quoteBasePrice" class="text-gray-500 font-bold italic">客服人工確認報價</span>
+                            <span class="font-medium text-[#e9e7ef]/80">基本車資</span>
+                            <span id="quoteBasePrice" class="text-[#e9e7ef] font-bold italic">客服人工確認報價</span>
                         </div>
-                        <div id="quoteList" class="space-y-1"></div>
-                        <div class="flex justify-between items-center pt-2 border-t border-pink-200 font-bold text-base mt-2">
-                            <span class="text-gray-700">預估車資總計</span>
-                            <span id="quoteTotal" class="text-[#f07cad] text-xl">$0</span>
+                        <div id="quoteList" class="space-y-1 text-[#e9e7ef]/90"></div>
+                        <div class="flex justify-between items-center pt-2 border-t border-[#e9e7ef]/30 font-bold text-base mt-2">
+                            <span class="text-[#e9e7ef]">預估車資總計</span>
+                            <span id="quoteTotal" class="text-[#e9e7ef] font-black text-2xl drop-shadow-sm">$0</span>
                         </div>
                     </div>
-                    <p class="text-[10px] text-[#f07cad] mt-3 text-center italic">※ 實際金額以客服最終確認為準。</p>
+                    <p class="text-[10px] text-[#e9e7ef]/60 mt-3 text-center italic">※ 實際金額以客服最終確認為準。</p>
                 </div>
 
                 <!-- 注意事項與詳細說明 -->
@@ -607,9 +607,11 @@
                 if (!liff.isLoggedIn()) { liff.login(); return; }
                 const profile = await liff.getProfile();
                 document.getElementById('sysLineId').value = profile.userId;
+                
                 const friendStatus = await liff.getFriendship();
+                
                 if (!friendStatus.friendFlag) {
-                    await Swal.fire({
+                    Swal.fire({
                         title: '請先加入好友',
                         html: `
                             <div style="text-align: left; line-height: 1.6; font-size: 14px;">
@@ -624,9 +626,31 @@
                         confirmButtonText: '我已加完好友，進入預約',
                         confirmButtonColor: '#553f62',
                         allowOutsideClick: false
+                    }).then(async (result) => {
+                        if (result.isConfirmed) {
+                            try {
+                                const recheckStatus = await liff.getFriendship();
+                                if (recheckStatus.friendFlag) {
+                                    showNoticeAndForm();
+                                } else {
+                                    // 避免系統偵測延遲導致使用者卡死，提示後直接放行
+                                    Swal.fire({
+                                        title: '偵測不到狀態',
+                                        text: '系統目前仍未偵測到您的好友狀態。若您已成功加入，可能是連線延遲，請直接點擊下方進入預約。',
+                                        icon: 'warning',
+                                        confirmButtonText: '強制進入預約',
+                                        confirmButtonColor: '#553f62',
+                                        allowOutsideClick: false
+                                    }).then(() => {
+                                        showNoticeAndForm();
+                                    });
+                                }
+                            } catch (e) {
+                                showNoticeAndForm();
+                            }
+                        }
                     });
-                    window.location.reload();
-                    return;
+                    return; // 確保不會立刻執行下面的 showNoticeAndForm()
                 }
                 showNoticeAndForm();
             } catch (err) { 
@@ -683,9 +707,10 @@
             const rideHourVal = document.getElementById('rideHour').value;
             const rideMinVal = document.getElementById('rideMinute').value;
 
+            let diffHours = -1;
             if (rideDateEl.value) {
                 const rideDateTime = new Date(`${rideDateEl.value}T${rideHourVal}:${rideMinVal}:00`);
-                const diffHours = (rideDateTime - new Date()) / (1000 * 60 * 60);
+                diffHours = (rideDateTime - new Date()) / (1000 * 60 * 60);
                 if (diffHours < 24 && diffHours > 0) {
                     Swal.fire({
                         title: '無法線上預約',
@@ -695,7 +720,31 @@
                     });
                     rideDateEl.value = "";
                     rideDateEl.type = "text";
+                    diffHours = -1;
                 }
+            }
+            
+            // --- 自動判斷夜間加成 ---
+            const optNight = document.getElementById('optNight');
+            const lblNight = document.getElementById('lblNight');
+            const nightHour = parseInt(rideHourVal, 10);
+            if (nightHour >= 23 || nightHour < 5) {
+                optNight.checked = true;
+                lblNight.classList.remove('opacity-60');
+            } else {
+                optNight.checked = false;
+                lblNight.classList.add('opacity-60');
+            }
+
+            // --- 自動判斷急單加價 ---
+            const optUrgent = document.getElementById('optUrgent');
+            const lblUrgent = document.getElementById('lblUrgent');
+            if (diffHours >= 24 && diffHours <= 48) {
+                optUrgent.checked = true;
+                lblUrgent.classList.remove('opacity-60');
+            } else {
+                optUrgent.checked = false;
+                lblUrgent.classList.add('opacity-60');
             }
 
             const rideType = document.getElementById('rideType').value;
@@ -728,19 +777,26 @@
             document.getElementById('quoteBasePrice').innerText = fareDisplay;
 
             let quoteHtml = '', totalSurcharge = 0;
-            if (rideType === '接機') { quoteHtml += `<div class="flex justify-between"><span>接機服務費</span><span class="text-[#f07cad] font-medium">+$200</span></div>`; totalSurcharge += 200; }
+            if (rideType === '接機') { quoteHtml += `<div class="flex justify-between"><span>└ 接機服務費</span><span>+$200</span></div>`; totalSurcharge += 200; }
             if (document.getElementById('needExtraStop').checked) {
                 if (extraStopFee > 0) { 
-                    quoteHtml += `<div class="flex justify-between items-center"><span>加點服務 <span class="text-[10px] text-gray-400">(${extraStopDist.toFixed(1)}公里)</span></span><span class="text-[#f07cad] font-medium">+$${extraStopFee}</span></div>`; 
+                    quoteHtml += `<div class="flex justify-between items-center"><span>└ 加點服務 <span class="text-[10px] text-[#e9e7ef]/60">(${extraStopDist.toFixed(1)}公里)</span></span><span>+$${extraStopFee}</span></div>`; 
                     totalSurcharge += extraStopFee; 
-                } else if (extraStopFee === -1) { quoteHtml += `<div class="flex justify-between"><span class="text-gray-400 italic">加點(客服人工報價)</span></div>`; }
+                } else if (extraStopFee === -1) { quoteHtml += `<div class="flex justify-between"><span class="text-[#e9e7ef]/70 italic">└ 加點(客服人工報價)</span></div>`; }
             }
             
             let infant = parseInt(document.getElementById('paxInfant').value) || 0;
             if(infant > 0) {
                 let sR = parseInt(document.getElementById('seatRear').value)||0, sF = parseInt(document.getElementById('seatForward').value)||0, sB = parseInt(document.getElementById('seatBooster').value)||0;
                 let seats = sR + sF + sB;
-                if(seats > 0) { quoteHtml += `<div class="flex justify-between"><span>安全座椅(${seats}張)</span><span class="text-[#f07cad] font-medium">+$${seats*200}</span></div>`; totalSurcharge += (seats * 200); }
+                if(seats > 0) {
+                    let seatDetails = [];
+                    if (sR > 0) seatDetails.push(`後向${sR}`);
+                    if (sF > 0) seatDetails.push(`前向${sF}`);
+                    if (sB > 0) seatDetails.push(`增高墊${sB}`);
+                    quoteHtml += `<div class="flex justify-between"><span>└ 安全座椅 <span class="text-[10px] text-[#e9e7ef]/60">(${seatDetails.join(', ')})</span></span><span>+$${seats*200}</span></div>`; 
+                    totalSurcharge += (seats * 200); 
+                }
                 let remain = infant - seats;
                 const updateSeat = (id, cur) => {
                     let el = document.getElementById(id), h = '';
@@ -751,7 +807,9 @@
                 document.getElementById('seatContainer').style.display = 'block';
             } else { document.getElementById('seatContainer').style.display = 'none'; }
 
-            if (document.getElementById('optSign').checked) { quoteHtml += `<div class="flex justify-between"><span>舉牌服務費</span><span class="text-[#f07cad] font-medium">+$200</span></div>`; totalSurcharge += 200; }
+            if (document.getElementById('optSign').checked) { quoteHtml += `<div class="flex justify-between"><span>└ 舉牌服務費</span><span>+$200</span></div>`; totalSurcharge += 200; }
+            if (document.getElementById('optNight').checked) { quoteHtml += `<div class="flex justify-between"><span>└ 夜間加成</span><span>+$200</span></div>`; totalSurcharge += 200; }
+            if (document.getElementById('optUrgent').checked) { quoteHtml += `<div class="flex justify-between"><span>└ 急單加價</span><span>+$300</span></div>`; totalSurcharge += 300; }
             
             let carry = parseInt(document.getElementById('luggageCarry').value) || 0;
             let checkEl = document.getElementById('luggageChecked');
@@ -771,8 +829,8 @@
             document.getElementById('carWarning').classList.toggle('hidden', isSmallOk);
 
             document.getElementById('quoteList').innerHTML = quoteHtml;
-            let finalTotal = basicFare > 0 ? (basicFare + totalSurcharge) : totalSurcharge;
-            document.getElementById('quoteTotal').innerText = basicFare > 0 ? `$${finalTotal}` : `(待報價) + $${totalSurcharge}`;
+            let finalTotal = basicFare + totalSurcharge;
+            document.getElementById('quoteTotal').innerText = `$${finalTotal}`;
         }
 
         document.getElementById('bookingForm').addEventListener('input', updateLogic);
@@ -786,10 +844,30 @@
             const req = [ { id: 'ordererName', n: '訂車人姓名' }, { id: 'ordererPhone', n: '訂車人電話' }, { id: 'userLineId', n: 'LINE ID' }, { id: 'rideDate', n: '日期' }, { id: 'flightNo', n: '航班' }, { id: 'address', n: '地址' } ];
             if (!sameAs) { req.push({ id: 'paxName', n: '乘車人姓名' }, { id: 'paxPhone', n: '乘車人電話' }); }
             for (let f of req) { if (!document.getElementById(f.id).value.trim()) { Swal.fire('提醒', `請填寫「${f.n}」`, 'warning'); return; } }
-            if (document.getElementById('optSign').checked && !document.getElementById('signContent').value.trim()) { Swal.fire('提醒', '請輸入舉牌姓名', 'warning'); return; }
+            if (document.getElementById('optSign').checked && !document.getElementById('signContent').value.trim()) { Swal.fire('提醒', '請輸入舉牌姓名或內容', 'warning'); return; }
 
             const btn = document.getElementById('submitBtn');
             btn.disabled = true; btn.innerText = '傳送中...';
+
+            // 統整加價項目以便送入資料庫
+            let surchargeArr = [];
+            if (document.getElementById('optSign').checked) surchargeArr.push(`舉牌:${document.getElementById('signContent').value}`);
+            if (document.getElementById('optNight').checked) surchargeArr.push('夜間加成');
+            if (document.getElementById('optUrgent').checked) surchargeArr.push('急單加價');
+            
+            // 加入安全座椅明細
+            let infantQty = parseInt(document.getElementById('paxInfant').value) || 0;
+            if (infantQty > 0) {
+                let sR = parseInt(document.getElementById('seatRear').value)||0, sF = parseInt(document.getElementById('seatForward').value)||0, sB = parseInt(document.getElementById('seatBooster').value)||0;
+                if ((sR + sF + sB) > 0) {
+                    let seatDetails = [];
+                    if (sR > 0) seatDetails.push(`後向${sR}`);
+                    if (sF > 0) seatDetails.push(`前向${sF}`);
+                    if (sB > 0) seatDetails.push(`增高墊${sB}`);
+                    surchargeArr.push(`安全座椅(${seatDetails.join(', ')})`);
+                }
+            }
+
             const payload = {
                 orderId: document.getElementById('orderId').value,
                 sysLineId: document.getElementById('sysLineId').value,
@@ -808,13 +886,13 @@
                 totalEst: document.getElementById('quoteTotal').innerText,
                 sportLuggage: Array.from(document.getElementsByName('sportLuggageRadio')).find(r => r.checked)?.value === "是" ? `有(${document.getElementById('sportLuggageQty').value}件, ${document.getElementById('sportLuggageSize').value})` : '無',
                 extraStop: document.getElementById('needExtraStop').checked ? stripTaiwan(document.getElementById('extraStopAddress').value) : '',
-                surcharge: document.getElementById('optSign').checked ? `舉牌:${document.getElementById('signContent').value}` : '',
+                surcharge: surchargeArr.join(', '),
                 remarks: document.getElementById('remarks').value
             };
             try {
                 await fetch(GAS_URL, { method: 'POST', body: JSON.stringify(payload), headers: { 'Content-Type': 'text/plain;charset=utf-8' } });
                 if (liff.isInClient()) { 
-                    const msg1 = `【安星租車 預約明細】\n預約編號：${payload.orderId}\n乘車時間：${payload.rideDate} ${payload.rideTime}\n行程路線：${document.getElementById('quoteRoute').innerText}\n預估車資：${payload.totalEst}`;
+                    const msg1 = `【安星租車 預約明細】\n預約編號：${payload.orderId}\n乘車時間：${payload.rideDate} ${payload.rideTime}\n行程路線：${document.getElementById('quoteRoute').innerText}\n加價項目：${payload.surcharge || '無'}\n預估車資：${payload.totalEst}`;
                     const msg2 = `您的預約資料已成功送出！\n為確保您的行程細節與權益，客服專員正在為您進行訂單核對。\n\n📌 預約注意事項：\n• 訂單確認： 須收到本公司的『預約確認回覆』後，才算正式完成預約。\n• 付款資訊： 若您選擇轉帳或刷卡結帳，客服將於確認訂單時，一併提供專屬付款連結或帳號。\n感謝您的耐心等候，我們將盡快與您聯繫。`;
                     
                     await liff.sendMessages([
