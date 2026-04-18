@@ -167,8 +167,8 @@
 
                     <div class="mb-4 space-y-4">
                         <div>
-                            <label class="block text-sm font-medium text-gray-700">郵遞區號</label>
-                            <input type="text" id="zipcode" readonly class="mt-1 w-full p-2 border rounded bg-gray-200 text-gray-600 shadow-inner" placeholder="系統自動帶入">
+                            <label class="block text-sm font-medium text-gray-700">區碼及區域</label>
+                            <input type="text" id="zipcode" readonly class="mt-1 w-full p-2 border rounded bg-gray-200 text-gray-600 shadow-inner font-bold" placeholder="系統自動帶入 (如: 104 台北市中山區)">
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-gray-700">詳細地址 <span class="text-xs text-red-500 font-normal ml-1">(恕不接受臨時加點或更改)</span></label>
@@ -181,8 +181,8 @@
                         </label>
                         <div id="extraStopContainer" class="hidden bg-white p-3 rounded border border-purple-200 shadow-inner space-y-3">
                             <div>
-                                <label class="block text-xs font-medium text-gray-500 mb-1">加點郵遞區號</label>
-                                <input type="text" id="extraZipcode" readonly class="w-full p-2 border rounded bg-gray-200 text-gray-600 shadow-inner" placeholder="自動帶入">
+                                <label class="block text-xs font-medium text-gray-500 mb-1">加點區碼及區域</label>
+                                <input type="text" id="extraZipcode" readonly class="w-full p-2 border rounded bg-gray-200 text-gray-600 shadow-inner font-bold" placeholder="自動帶入">
                             </div>
                             <div>
                                 <label class="block text-xs font-medium text-gray-500 mb-1">加點詳細地址</label>
@@ -428,6 +428,35 @@
             return str.replace(/台灣/g, "").trim();
         }
 
+        // --- 萃取包含縣市區域的郵遞區號字串 ---
+        function parseZoneInfo(place) {
+            let zip = '', city = '', dist = '';
+            if (place.address_components) {
+                for (let c of place.address_components) {
+                    if (c.types.includes('postal_code')) zip = c.long_name;
+                    if (c.types.includes('administrative_area_level_1') || c.types.includes('administrative_area_level_2')) {
+                        if (c.long_name.match(/(市|縣)$/)) city = c.long_name;
+                    }
+                    if (c.types.includes('locality') || c.types.includes('sublocality') || c.types.includes('sublocality_level_1') || c.types.includes('administrative_area_level_3')) {
+                        if (c.long_name.match(/(區|市|鎮|鄉)$/) && c.long_name !== city) dist = c.long_name;
+                    }
+                }
+                // Fallbacks in case Google Maps returns weird structures
+                if (!city) {
+                    let fallbackCity = place.address_components.find(c => c.types.includes('administrative_area_level_1') && c.long_name !== '台灣');
+                    if (fallbackCity) city = fallbackCity.long_name;
+                }
+                if (!dist) {
+                    let fallbackDist = place.address_components.find(c => c.types.includes('locality') && c.long_name !== city);
+                    if (fallbackDist) dist = fallbackDist.long_name;
+                }
+            }
+            let res = zip;
+            if (city) res += (res ? ' ' : '') + city;
+            if (dist) res += dist;
+            return res.trim();
+        }
+
         // --- 抓取報價表資料 ---
         async function fetchPriceTable() {
             try {
@@ -553,11 +582,7 @@
                 addressAutocomplete.addListener('place_changed', () => {
                     const place = addressAutocomplete.getPlace();
                     inputAddress.value = stripTaiwan(place.formatted_address);
-                    let zipcode = '';
-                    if(place.address_components) {
-                        for (let c of place.address_components) { if (c.types.includes('postal_code')) { zipcode = c.long_name; break; } }
-                    }
-                    document.getElementById('zipcode').value = zipcode;
+                    document.getElementById('zipcode').value = parseZoneInfo(place);
                     calculateDistanceFee();
                     updateLogic();
                 });
@@ -567,11 +592,7 @@
                 extraStopAutocomplete.addListener('place_changed', () => {
                     const place = extraStopAutocomplete.getPlace();
                     inputExtra.value = stripTaiwan(place.formatted_address);
-                    let zipcode = '';
-                    if(place.address_components) {
-                        for (let c of place.address_components) { if (c.types.includes('postal_code')) { zipcode = c.long_name; break; } }
-                    }
-                    document.getElementById('extraZipcode').value = zipcode;
+                    document.getElementById('extraZipcode').value = parseZoneInfo(place);
                     calculateDistanceFee();
                 });
             }
@@ -749,7 +770,9 @@
 
             const rideType = document.getElementById('rideType').value;
             const airport = document.getElementById('airport').value;
-            const zipcode = document.getElementById('zipcode').value;
+            // 提取第一段純數字作為基本車資判斷（例如 "104 台北市中山區" -> "104"）
+            const fullZipcode = document.getElementById('zipcode').value;
+            const zipcode = fullZipcode ? fullZipcode.split(' ')[0] : '';
             const carType = document.getElementById('carType').value;
             const addressVal = document.getElementById('address').value;
             const area = addressVal ? addressVal.substring(0, 3) : "地區";
