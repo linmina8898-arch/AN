@@ -413,8 +413,9 @@
         // --- 設定常數 ---
         const LIFF_ID = "2009827083-SPSbrR9a";
         const LINE_OA_LINK = "https://line.me/R/ti/p/@220ewdah";
-        const GAS_URL = "https://script.google.com/macros/s/AKfycbwbS3i7EQSPULmFONayAFncvdq0c11W_mWlDsF1DWwUw6FwQia6E0Tj1Tx2RAJIisyN/exec"; 
-        const PRICE_API_URL = "https://script.google.com/macros/s/AKfycbx2tXvc6WNdY3wDxY1xqcV4SVOzq-VwuQQMkp22IJnrBHoBVgMXAJzaw8UCJqA6ixVw/exec";
+        const GAS_URL = "https://script.google.com/macros/s/AKfycbxDtwaaCUZcWNLqhfhSDPomP9NcC2otnQwFzQysgDRpxBt1sBxRdL1ZqtSuN8Okbnw3/exec"; 
+        // 報價 API 連結
+        const PRICE_API_URL = "https://script.google.com/macros/s/AKfycbwbS3i7EQSPULmFONayAFncvdq0c11W_mWlDsF1DWwUw6FwQia6E0Tj1Tx2RAJIisyN/exec";
 
         let extraStopFee = 0;
         let extraStopDist = 0;
@@ -428,31 +429,24 @@
             return str.replace(/台灣/g, "").trim();
         }
 
-        // --- 萃取包含縣市區域的郵遞區號字串 ---
+        // --- 優化：萃取完整的「郵遞區號+縣市+行政區」 ---
         function parseZoneInfo(place) {
             let zip = '', city = '', dist = '';
-            if (place.address_components) {
-                for (let c of place.address_components) {
-                    if (c.types.includes('postal_code')) zip = c.long_name;
-                    if (c.types.includes('administrative_area_level_1') || c.types.includes('administrative_area_level_2')) {
-                        if (c.long_name.match(/(市|縣)$/)) city = c.long_name;
+            if (place && place.address_components) {
+                place.address_components.forEach(component => {
+                    const types = component.types;
+                    if (types.includes('postal_code')) zip = component.long_name;
+                    if (types.includes('administrative_area_level_1') || types.includes('administrative_area_level_2')) {
+                        if (component.long_name.match(/(市|縣)$/)) city = component.long_name;
                     }
-                    if (c.types.includes('locality') || c.types.includes('sublocality') || c.types.includes('sublocality_level_1') || c.types.includes('administrative_area_level_3')) {
-                        if (c.long_name.match(/(區|市|鎮|鄉)$/) && c.long_name !== city) dist = c.long_name;
+                    if (types.includes('administrative_area_level_3') || types.includes('locality') || types.includes('sublocality')) {
+                        const name = component.long_name;
+                        if (name.match(/(區|市|鎮|鄉)$/) && name !== city) dist = name;
                     }
-                }
-                // Fallbacks in case Google Maps returns weird structures
-                if (!city) {
-                    let fallbackCity = place.address_components.find(c => c.types.includes('administrative_area_level_1') && c.long_name !== '台灣');
-                    if (fallbackCity) city = fallbackCity.long_name;
-                }
-                if (!dist) {
-                    let fallbackDist = place.address_components.find(c => c.types.includes('locality') && c.long_name !== city);
-                    if (fallbackDist) dist = fallbackDist.long_name;
-                }
+                });
             }
             let res = zip;
-            if (city) res += (res ? ' ' : '') + city;
+            if (city) res += (res ? ' ' : '') + city.replace('台灣', '');
             if (dist) res += dist;
             return res.trim();
         }
@@ -578,7 +572,10 @@
             const inputAddress = document.getElementById('address');
             const inputExtra = document.getElementById('extraStopAddress');
             if (inputAddress) {
-                addressAutocomplete = new google.maps.places.Autocomplete(inputAddress, { componentRestrictions: { country: "tw" }, fields: ["address_components", "formatted_address"] });
+                addressAutocomplete = new google.maps.places.Autocomplete(inputAddress, { 
+                    componentRestrictions: { country: "tw" }, 
+                    fields: ["address_components", "formatted_address"] 
+                });
                 addressAutocomplete.addListener('place_changed', () => {
                     const place = addressAutocomplete.getPlace();
                     inputAddress.value = stripTaiwan(place.formatted_address);
@@ -588,7 +585,10 @@
                 });
             }
             if (inputExtra) {
-                extraStopAutocomplete = new google.maps.places.Autocomplete(inputExtra, { componentRestrictions: { country: "tw" }, fields: ["address_components", "formatted_address"] });
+                extraStopAutocomplete = new google.maps.places.Autocomplete(inputExtra, { 
+                    componentRestrictions: { country: "tw" }, 
+                    fields: ["address_components", "formatted_address"] 
+                });
                 extraStopAutocomplete.addListener('place_changed', () => {
                     const place = extraStopAutocomplete.getPlace();
                     inputExtra.value = stripTaiwan(place.formatted_address);
@@ -630,7 +630,6 @@
                 document.getElementById('sysLineId').value = profile.userId;
                 
                 const friendStatus = await liff.getFriendship();
-                
                 if (!friendStatus.friendFlag) {
                     Swal.fire({
                         title: '請先加入好友',
@@ -654,7 +653,6 @@
                                 if (recheckStatus.friendFlag) {
                                     showNoticeAndForm();
                                 } else {
-                                    // 避免系統偵測延遲導致使用者卡死，提示後直接放行
                                     Swal.fire({
                                         title: '偵測不到狀態',
                                         text: '系統目前仍未偵測到您的好友狀態。若您已成功加入，可能是連線延遲，請直接點擊下方進入預約。',
@@ -671,7 +669,7 @@
                             }
                         }
                     });
-                    return; // 確保不會立刻執行下面的 showNoticeAndForm()
+                    return; 
                 }
                 showNoticeAndForm();
             } catch (err) { 
@@ -745,7 +743,6 @@
                 }
             }
             
-            // --- 自動判斷夜間加成 ---
             const optNight = document.getElementById('optNight');
             const lblNight = document.getElementById('lblNight');
             const nightHour = parseInt(rideHourVal, 10);
@@ -757,7 +754,6 @@
                 lblNight.classList.add('opacity-60');
             }
 
-            // --- 自動判斷急單加價 ---
             const optUrgent = document.getElementById('optUrgent');
             const lblUrgent = document.getElementById('lblUrgent');
             if (diffHours >= 24 && diffHours <= 48) {
@@ -770,26 +766,47 @@
 
             const rideType = document.getElementById('rideType').value;
             const airport = document.getElementById('airport').value;
-            // 提取第一段純數字作為基本車資判斷（例如 "104 台北市中山區" -> "104"）
-            const fullZipcode = document.getElementById('zipcode').value;
-            const zipcode = fullZipcode ? fullZipcode.split(' ')[0] : '';
+            const fullZipInfo = document.getElementById('zipcode').value; // 例如 "300 新竹市香山區"
+            
+            // 解析使用者輸入的 Zip 與 Area
+            const zipParts = fullZipInfo.split(' ');
+            const userZip = zipParts[0] ? zipParts[0].trim() : '';
+            const userArea = zipParts.slice(1).join('').trim(); // "新竹市香山區"
+
             const carType = document.getElementById('carType').value;
             const addressVal = document.getElementById('address').value;
-            const area = addressVal ? addressVal.substring(0, 3) : "地區";
+            const areaDisplay = addressVal ? addressVal.substring(0, 3) : "地區";
 
-            document.getElementById('quoteRoute').innerText = rideType === "送機" ? `${area} → ${airport}` : `${airport} → ${area}`;
+            document.getElementById('quoteRoute').innerText = rideType === "送機" ? `${areaDisplay} → ${airport}` : `${airport} → ${areaDisplay}`;
             document.getElementById('quoteCarType').innerText = carType;
             document.getElementById('quotePayment').innerText = document.getElementById('payment').value;
 
-            // --- 修復基本車資匹配邏輯 ---
+            // --- 強化版基本車資比對邏輯 ---
             basicFare = 0;
             let fareDisplay = "客服人工確認報價";
-            if (zipcode && airport && priceTable.length > 0) {
+            if (userZip && airport && priceTable.length > 0) {
                 const searchAirport = airport.substring(0, 2); // 例如 "桃園"
-                const match = priceTable.find(item => 
-                    String(item.a).includes(searchAirport) && 
-                    String(item.b).trim() === String(zipcode).trim()
-                );
+                
+                // 優先執行完全匹配 (Zip + Area)，再退而求其次執行 Zip 匹配
+                let match = priceTable.find(item => {
+                    const rowAirport = String(item.a || "").trim();
+                    const rowZip = String(item.b || "").trim();
+                    const rowArea = String(item.c || "").trim();
+
+                    // 檢查機場是否一致
+                    if (!rowAirport.includes(searchAirport)) return false;
+
+                    // 1. 完全精準比對 (Zip 與地區皆相同)
+                    if (rowZip === userZip && rowArea === userArea) return true;
+
+                    // 2. 郵遞區號優先比對 + 區域模糊比對
+                    if (rowZip === userZip) {
+                        if (userArea.includes(rowArea) || rowArea.includes(userArea)) return true;
+                    }
+
+                    return false;
+                });
+
                 if (match) {
                     if (carType === '小車') basicFare = parseInt(match.d) || 0;
                     else if (carType === '大車') basicFare = parseInt(match.e) || 0;
@@ -872,13 +889,11 @@
             const btn = document.getElementById('submitBtn');
             btn.disabled = true; btn.innerText = '傳送中...';
 
-            // 統整加價項目以便送入資料庫
             let surchargeArr = [];
             if (document.getElementById('optSign').checked) surchargeArr.push(`舉牌:${document.getElementById('signContent').value}`);
             if (document.getElementById('optNight').checked) surchargeArr.push('夜間加成');
             if (document.getElementById('optUrgent').checked) surchargeArr.push('急單加價');
             
-            // 加入安全座椅明細
             let infantQty = parseInt(document.getElementById('paxInfant').value) || 0;
             if (infantQty > 0) {
                 let sR = parseInt(document.getElementById('seatRear').value)||0, sF = parseInt(document.getElementById('seatForward').value)||0, sB = parseInt(document.getElementById('seatBooster').value)||0;
