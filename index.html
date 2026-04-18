@@ -4,9 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>安星租車預約/詢價 系統</title>
+    <!-- Tailwind CSS for styling -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- SweetAlert2 for popups -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <!-- LINE LIFF SDK -->
     <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+    <!-- Google Maps Places API -->
     <script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAxYym5ZR8puPb0iiycHdwzTJTKH0Aears&libraries=places&callback=initMapAutocomplete"></script>
 
     <style>
@@ -25,18 +29,23 @@
         input[type="checkbox"]:checked { background-color: var(--primary); border-color: var(--primary); }
         .order-id-font { font-family: 'Courier New', Courier, monospace; }
         
+        /* 動態展開動畫 */
         #detailsContent { transition: max-height 0.3s ease-out; overflow: hidden; }
+        /* 禁用狀態的勾選框樣式 */
         input[type="checkbox"]:disabled { cursor: not-allowed; opacity: 0.5; }
     </style>
 </head>
 <body class="pb-10">
 
+    <!-- Header -->
     <div class="bg-primary text-white text-center py-4 shadow-md sticky top-0 z-50">
         <h1 class="text-xl font-bold tracking-wider">安星租車預約/詢價 系統</h1>
     </div>
 
+    <!-- Form Container -->
     <div id="formContainer" class="max-w-2xl mx-auto mt-4 px-4 hidden">
         
+        <!-- 精簡版預約編號 -->
         <div class="flex justify-end items-center mb-3">
             <div class="bg-[#fff5f8] px-3 py-1.5 rounded-full border border-[#f07cad]/50 shadow-sm flex items-center space-x-2">
                 <span class="text-[10px] font-bold text-[#f07cad] uppercase tracking-wider">預約編號:</span>
@@ -47,9 +56,11 @@
         <div class="bg-white rounded-xl shadow-lg p-4 space-y-6">
             <form id="bookingForm" class="space-y-6">
                 
+                <!-- Hidden Fields -->
                 <input type="hidden" id="sysLineId" name="sysLineId">
                 <input type="hidden" id="orderId" name="orderId">
                 
+                <!-- 訂車人資訊 -->
                 <div class="bg-gray-50 p-5 rounded-xl border border-gray-200 shadow-sm">
                     <h2 class="text-lg font-bold text-primary mb-4 flex items-center">
                         <span class="w-1 h-5 bg-primary mr-2 inline-block rounded"></span>訂車人資訊
@@ -83,6 +94,7 @@
                     </div>
                 </div>
 
+                <!-- 乘車人資訊 -->
                 <div class="bg-gray-50 p-5 rounded-xl border border-gray-200 shadow-sm">
                     <div class="flex justify-between items-center mb-4">
                         <h2 class="text-lg font-bold text-primary flex items-center">
@@ -114,6 +126,7 @@
                     </div>
                 </div>
 
+                <!-- 行程資訊 -->
                 <div class="bg-gray-50 p-5 rounded-xl border border-gray-200 shadow-sm">
                     <h2 class="text-lg font-bold text-primary mb-4 flex items-center"><span class="w-1 h-5 bg-primary mr-2 inline-block rounded"></span>行程資訊</h2>
                     <div class="grid grid-cols-2 gap-3 mb-4">
@@ -179,6 +192,7 @@
                     </div>
                 </div>
 
+                <!-- 人數與行李 -->
                 <div class="bg-gray-50 p-5 rounded-xl border border-gray-200 shadow-sm">
                     <h2 class="text-lg font-bold text-primary mb-4 flex items-center"><span class="w-1 h-5 bg-primary mr-2 inline-block rounded"></span>人數與行李</h2>
                     
@@ -231,6 +245,7 @@
                         </div>
                     </div>
 
+                    <!-- 胖胖箱註記區 -->
                     <div class="mt-4 pt-4 border-t border-gray-100">
                         <label class="block text-sm font-bold text-gray-700 mb-2">是否有攜帶胖胖箱（運動版行李箱）</label>
                         <div class="flex items-center space-x-6 mb-2">
@@ -255,13 +270,13 @@
                             <div class="grid grid-cols-2 gap-3">
                                 <div>
                                     <label class="block text-xs font-medium text-[#f07cad]">數量 (件)</label>
-                                    <select id="sportLuggageQty" class="w-full p-2 border border-pink-200 rounded mt-1 text-sm bg-white outline-none">
+                                    <select id="sportLuggageQty" class="w-full p-2 border border-pink-200 rounded mt-1 text-sm bg-white outline-none focus:ring-pink-400">
                                         <option value="1">1件</option><option value="2">2件</option><option value="3">3件</option><option value="4">4件</option>
                                     </select>
                                 </div>
                                 <div>
                                     <label class="block text-xs font-medium text-[#f07cad]">吋數/大小</label>
-                                    <input type="text" id="sportLuggageSize" class="w-full p-2 border border-pink-200 rounded mt-1 text-sm bg-white outline-none" placeholder="例如: 29吋">
+                                    <input type="text" id="sportLuggageSize" class="w-full p-2 border border-pink-200 rounded mt-1 text-sm bg-white outline-none focus:ring-pink-400" placeholder="例如: 29吋">
                                 </div>
                             </div>
                         </div>
@@ -278,6 +293,7 @@
                     </div>
                 </div>
 
+                <!-- 付款與備註 -->
                 <div class="bg-gray-50 p-5 rounded-xl border border-gray-200 shadow-sm">
                     <h2 class="text-lg font-bold text-primary mb-4 flex items-center"><span class="w-1 h-5 bg-primary mr-2 inline-block rounded"></span>付款與備註</h2>
                     
@@ -319,6 +335,7 @@
                     </div>
                 </div>
 
+                <!-- 預估報價明細 -->
                 <div class="bg-[#fff5f8] p-5 rounded-xl border border-[#f07cad] shadow-sm">
                     <h2 class="text-lg font-bold text-[#f07cad] mb-3 flex items-center"><span class="w-1 h-5 bg-[#f07cad] mr-2 inline-block rounded"></span>預估報價明細</h2>
                     <div class="space-y-2 text-sm text-gray-700">
@@ -349,6 +366,7 @@
                     <p class="text-[10px] text-[#f07cad] mt-3 text-center italic">※ 實際金額以客服最終確認為準。</p>
                 </div>
 
+                <!-- 注意事項與詳細說明 -->
                 <div class="bg-gray-50 p-5 rounded-xl border border-gray-200 shadow-sm">
                     <h3 class="font-bold mb-3 text-primary flex items-center text-lg">
                         <span class="w-1 h-6 bg-primary mr-2 inline-block rounded"></span>【乘車注意事項】
@@ -380,12 +398,14 @@
         </div>
     </div>
 
+    <!-- Loading Overlay -->
     <div id="loading" class="fixed inset-0 bg-white bg-opacity-80 z-50 flex flex-col items-center justify-center">
         <div class="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-[#553f62]"></div>
         <p class="mt-4 text-[#553f62] font-bold" id="loadingText">系統載入中...</p>
     </div>
 
     <script>
+        // --- 設定常數 ---
         const LIFF_ID = "2009827083-SPSbrR9a";
         const LINE_OA_LINK = "https://line.me/R/ti/p/@220ewdah";
         const GAS_URL = "https://script.google.com/macros/s/AKfycbx2tXvc6WNdY3wDxY1xqcV4SVOzq-VwuQQMkp22IJnrBHoBVgMXAJzaw8UCJqA6ixVw/exec"; 
@@ -397,11 +417,13 @@
         let priceTable = []; 
         let hasReadDetails = false; 
 
+        // --- 輔助函式：移除「台灣」字樣 ---
         function stripTaiwan(str) {
             if (!str) return "";
             return str.replace(/台灣/g, "").trim();
         }
 
+        // --- 抓取報價表資料 ---
         async function fetchPriceTable() {
             try {
                 const response = await fetch(PRICE_API_URL, { method: 'GET', mode: 'cors', cache: 'no-cache', redirect: 'follow' });
@@ -409,10 +431,12 @@
                 const data = await response.json();
                 if (data && Array.isArray(data)) {
                     priceTable = data;
+                    console.log("報價資料庫已更新");
                 }
-            } catch (err) { console.warn("報價讀取失敗"); }
+            } catch (err) { console.warn("報價讀取失敗，改用手動報價模式。"); }
         }
 
+        // --- 產生預約編號 ---
         function generateOrderId() {
             const d = new Date();
             const dateStr = d.getFullYear() + String(d.getMonth()+1).padStart(2,'0') + String(d.getDate()).padStart(2,'0');
@@ -423,6 +447,7 @@
             return `AX-${dateStr}${digits}${rChars}`;
         }
 
+        // --- 初始化頁面 ---
         async function initFormOptions() {
             let hrHtml = '', minHtml = '';
             for(let i=0; i<=23; i++) hrHtml += `<option value="${String(i).padStart(2,'0')}">${String(i).padStart(2,'0')}</option>`;
@@ -444,6 +469,7 @@
             updateLogic(); 
         }
 
+        // --- 詳細說明展開邏輯（包含解鎖勾選框） ---
         function setupDetailsToggle() {
             const btn = document.getElementById('toggleDetails');
             const content = document.getElementById('detailsContent');
@@ -469,6 +495,7 @@
             });
         }
 
+        // --- 訂車人與乘車人連動邏輯 ---
         function setupSyncLogic() {
             const sameCheck = document.getElementById('sameAsOrderer');
             const oName = document.getElementById('ordererName');
@@ -492,6 +519,7 @@
             [oName, oTitle, oPhone].forEach(el => el.addEventListener('input', () => { if (sameCheck.checked) syncData(); }));
         }
 
+        // --- 人數與行李連動 ---
         function renderPaxOptions() {
             const adultEl = document.getElementById('paxAdult');
             const childEl = document.getElementById('paxChild');
@@ -510,6 +538,7 @@
             updateSelect(infantEl, curI, Math.min(2, 7 - curA - curC), 0);
         }
 
+        // --- Google Maps Autocomplete ---
         let addressAutocomplete, extraStopAutocomplete;
         function initMapAutocomplete() {
             const inputAddress = document.getElementById('address');
@@ -562,7 +591,7 @@
             });
         }
 
-        // --- 核心修改：強制加好友檢查 ---
+        // --- 核心修改：優化加好友檢查流程，確保可以回到畫面 ---
         async function initializeLiff() {
             if (window !== window.parent) { 
                 document.getElementById('sysLineId').value = 'Preview'; 
@@ -581,13 +610,22 @@
                 if (!friendStatus.friendFlag) {
                     await Swal.fire({
                         title: '請先加入好友',
-                        text: '為了傳送預約成功通知給您，請先加入「安星租車」好友。',
+                        html: `
+                            <div style="text-align: left; line-height: 1.6; font-size: 14px;">
+                                <p>為了確保您能收到「預約成功通知」與「派車資訊」，請先加入安星租車官方帳號好友。</p>
+                                <p style="color: #f07cad; font-weight: bold; margin-top: 10px;">加完好友後，請手動「關閉」好友畫面，回到此表單並點擊下方按鈕進入。</p>
+                                <div style="text-align: center; margin-top: 20px;">
+                                    <a href="${LINE_OA_LINK}" target="_blank" style="background-color: #f07cad; color: white; padding: 10px 25px; border-radius: 25px; text-decoration: none; font-weight: bold; display: inline-block;">點我前往加好友</a>
+                                </div>
+                            </div>
+                        `,
                         icon: 'info',
-                        confirmButtonText: '前往加好友',
+                        confirmButtonText: '我已加完好友，進入預約',
                         confirmButtonColor: '#553f62',
                         allowOutsideClick: false
                     });
-                    window.location.href = LINE_OA_LINK;
+                    // 點擊「我已加完好友」後，重新整理頁面以觸發再次檢查
+                    window.location.reload();
                     return;
                 }
 
