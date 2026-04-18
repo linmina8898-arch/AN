@@ -910,12 +910,47 @@
         document.getElementById('bookingForm').addEventListener('submit', async function(e) {
             e.preventDefault();
             const sameAs = document.getElementById('sameAsOrderer').checked;
+            
+            // 基礎驗證
             if (!hasReadDetails) { Swal.fire('提醒', '請點擊「詳細說明」閱讀乘車規範後方可送出', 'warning'); return; }
             if (!document.getElementById('agreeDisclaimer').checked) { Swal.fire('提醒', '【乘車注意事項】\n(同意後方可送出)', 'warning'); return; }
-            const req = [ { id: 'ordererName', n: '訂車人姓名' }, { id: 'ordererPhone', n: '訂車人電話' }, { id: 'userLineId', n: 'LINE ID' }, { id: 'rideDate', n: '日期' }, { id: 'flightNo', n: '航班' }, { id: 'address', n: '地址' } ];
-            if (!sameAs) { req.push({ id: 'paxName', n: '乘車人姓名' }, { id: 'paxPhone', n: '乘車人電話' }); }
-            for (let f of req) { if (!document.getElementById(f.id).value.trim()) { Swal.fire('提醒', `請填寫「${f.n}」`, 'warning'); return; } }
-            if (document.getElementById('optSign').checked && !document.getElementById('signContent').value.trim()) { Swal.fire('提醒', '請輸入舉牌姓名或內容', 'warning'); return; }
+
+            // 所有欄位驗證 (除了 Email 以外)
+            const req = [
+                { id: 'ordererName', n: '訂車人真實姓名' },
+                { id: 'ordererPhone', n: '訂車人聯絡電話' },
+                { id: 'userLineId', n: 'LINE ID' },
+                { id: 'rideDate', n: '乘車日期' },
+                { id: 'flightNo', n: '航班編號' },
+                { id: 'address', n: '主要詳細地址' },
+                { id: 'remarks', n: '其他備註 (若無請填無)' }
+            ];
+
+            if (!sameAs) {
+                req.push({ id: 'paxName', n: '乘車人真實姓名' }, { id: 'paxPhone', n: '乘車人聯絡電話' });
+            }
+
+            // 條件式顯示欄位的驗證
+            if (document.getElementById('needExtraStop').checked) {
+                req.push({ id: 'extraStopAddress', n: '加點詳細地址' });
+            }
+            if (document.getElementById('optSign').checked) {
+                req.push({ id: 'signContent', n: '舉牌姓名或內容' });
+            }
+            const sportRadio = Array.from(document.getElementsByName('sportLuggageRadio')).find(r => r.checked)?.value;
+            if (sportRadio === "是") {
+                req.push({ id: 'sportLuggageSize', n: '胖胖箱吋數/大小' });
+            }
+
+            // 執行必填檢查
+            for (let f of req) {
+                const el = document.getElementById(f.id);
+                if (!el.value || !el.value.trim()) {
+                    Swal.fire('提醒', `請填寫「${f.n}」`, 'warning');
+                    el.focus();
+                    return;
+                }
+            }
 
             const btn = document.getElementById('submitBtn');
             btn.disabled = true; btn.innerText = '傳送中...';
@@ -953,7 +988,7 @@
                 payment: document.getElementById('payment').value,
                 basicFare: basicFare > 0 ? basicFare : "待報價",
                 totalEst: document.getElementById('quoteTotal').innerText,
-                sportLuggage: Array.from(document.getElementsByName('sportLuggageRadio')).find(r => r.checked)?.value === "是" ? `有(${document.getElementById('sportLuggageQty').value}件, ${document.getElementById('sportLuggageSize').value})` : '無',
+                sportLuggage: (sportRadio === "是") ? `有(${document.getElementById('sportLuggageQty').value}件, ${document.getElementById('sportLuggageSize').value})` : '無',
                 extraStop: document.getElementById('needExtraStop').checked ? stripTaiwan(document.getElementById('extraStopAddress').value) : '',
                 surcharge: surchargeArr.join(', '),
                 remarks: document.getElementById('remarks').value
@@ -981,7 +1016,7 @@
                             carType: payload.carType,
                             passengers: `大${document.getElementById('paxAdult').value} 中${document.getElementById('paxChild').value} 小${document.getElementById('paxInfant').value}`,
                             luggage: `登機${document.getElementById('luggageCarry').value} 托運${document.getElementById('luggageChecked').value} / 胖胖箱:${payload.sportLuggage}`,
-                            totalFee: payload.totalFee,
+                            totalFee: payload.totalEst,
                             payment: payload.payment,
                             remarks: payload.remarks + (payload.surcharge ? "\n加價項目: " + payload.surcharge : "")
                         }
