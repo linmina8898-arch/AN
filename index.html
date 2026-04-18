@@ -413,9 +413,8 @@
         // --- 設定常數 ---
         const LIFF_ID = "2009827083-SPSbrR9a";
         const LINE_OA_LINK = "https://line.me/R/ti/p/@220ewdah";
-        const GAS_URL = "https://script.google.com/macros/s/AKfycbxDtwaaCUZcWNLqhfhSDPomP9NcC2otnQwFzQysgDRpxBt1sBxRdL1ZqtSuN8Okbnw3/exec"; 
-        // 報價 API 連結
-        const PRICE_API_URL = "https://script.google.com/macros/s/AKfycbxDtwaaCUZcWNLqhfhSDPomP9NcC2otnQwFzQysgDRpxBt1sBxRdL1ZqtSuN8Okbnw3/exec";
+        // 主要 API 網址 (GAS)
+        const GAS_URL = "https://script.google.com/macros/s/AKfycbzwNr2pLiqKhR56Uzy7HMM3bWiH2PmnV-TPLAJ-6Hz3vXxFkOQDCJO40YW-BTjfBsuO/exec"; 
 
         let extraStopFee = 0;
         let extraStopDist = 0;
@@ -433,64 +432,46 @@
         function parseZoneInfo(place) {
             let zip = '', city = '', dist = '';
             if (place && place.address_components) {
-                // 遍歷所有地址元件
                 place.address_components.forEach(component => {
                     const types = component.types;
-                    
-                    // 1. 抓取郵遞區號 (如: 300)
-                    if (types.includes('postal_code')) {
-                        zip = component.long_name;
-                    }
-                    
-                    // 2. 抓取縣市 (行政層級 1 或 2，如: 新竹市、台北市)
+                    if (types.includes('postal_code')) { zip = component.long_name; }
                     if (types.includes('administrative_area_level_1') || types.includes('administrative_area_level_2')) {
                         const name = component.long_name;
-                        if (name.match(/(市|縣)$/)) {
-                            city = name.replace('台灣', '');
-                        }
+                        if (name.match(/(市|縣)$/)) { city = name.replace('台灣', ''); }
                     }
-                    
-                    // 3. 抓取鄉鎮市區 (行政層級 3 或 locality 或 sublocality)
-                    // 台灣的行政區通常在 sublocality_level_1 或 administrative_area_level_3
                     if (types.includes('sublocality_level_1') || types.includes('administrative_area_level_3') || types.includes('locality')) {
                         const name = component.long_name;
-                        // 排除已經是縣市的名稱，並確保是區/市/鎮/鄉
-                        if (name.match(/(區|市|鎮|鄉)$/) && name !== city) {
-                            dist = name;
-                        }
+                        if (name.match(/(區|市|鎮|鄉)$/) && name !== city) { dist = name; }
                     }
                 });
             }
-            
-            // 如果從組件中沒抓到行政區，嘗試從 formatted_address 中用正則表達式擷取
             if (!dist && place.formatted_address) {
                 const addr = place.formatted_address;
-                // 比對 縣市之後的「XXX區」或「XXX市」等
                 const match = addr.match(/(?:縣|市)([^縣市]+?(?:區|市|鎮|鄉))/);
-                if (match && match[1]) {
-                    dist = match[1];
-                }
+                if (match && match[1]) { dist = match[1]; }
             }
-            
-            // 整理最終顯示格式：300 新竹市香山區
             let res = zip;
             if (city) res += (res ? ' ' : '') + city;
             if (dist) res += dist;
-            
             return res.trim();
         }
 
-        // --- 抓取報價表資料 ---
+        // --- 抓取報價表資料 (關鍵修正：加上 action 參數並優化 fetch) ---
         async function fetchPriceTable() {
             try {
-                const response = await fetch(PRICE_API_URL, { method: 'GET', mode: 'cors', cache: 'no-cache', redirect: 'follow' });
+                // 加上 ?action=getPrices 以利 GAS 判斷動作，並加上時間戳防止快取
+                const url = `${GAS_URL}?action=getPrices&t=${Date.now()}`;
+                const response = await fetch(url, { method: 'GET', redirect: 'follow' });
                 if (!response.ok) throw new Error('Network error');
                 const data = await response.json();
                 if (data && Array.isArray(data)) {
                     priceTable = data;
                     console.log("報價資料庫已更新，共 " + priceTable.length + " 筆");
+                    updateLogic(); // 抓到資料後立即更新一次報價明細
                 }
-            } catch (err) { console.warn("報價讀取失敗"); }
+            } catch (err) { 
+                console.error("報價讀取失敗:", err); 
+            }
         }
 
         // --- 產生預約編號 ---
@@ -522,7 +503,8 @@
             setupSyncLogic();
             setupDetailsToggle();
             
-            await fetchPriceTable();
+            // 非同步抓取報價表
+            fetchPriceTable();
             updateLogic(); 
         }
 
@@ -608,7 +590,6 @@
                 addressAutocomplete.addListener('place_changed', () => {
                     const place = addressAutocomplete.getPlace();
                     inputAddress.value = stripTaiwan(place.formatted_address);
-                    // 使用強化後的 parseZoneInfo 抓取 300 新竹市香山區
                     document.getElementById('zipcode').value = parseZoneInfo(place);
                     calculateDistanceFee();
                     updateLogic();
@@ -622,7 +603,6 @@
                 extraStopAutocomplete.addListener('place_changed', () => {
                     const place = extraStopAutocomplete.getPlace();
                     inputExtra.value = stripTaiwan(place.formatted_address);
-                    // 同步套用到加點
                     document.getElementById('extraZipcode').value = parseZoneInfo(place);
                     calculateDistanceFee();
                 });
@@ -797,12 +777,11 @@
 
             const rideType = document.getElementById('rideType').value;
             const airport = document.getElementById('airport').value;
-            const fullZipInfo = document.getElementById('zipcode').value; // 例如 "300 新竹市香山區"
-            
-            // 匹配邏輯：從 "300 新竹市香山區" 分離出 300 與 行政區
+            const fullZipInfo = document.getElementById('zipcode').value; 
+
             const zipParts = fullZipInfo.split(' ');
             const userZip = zipParts[0] ? zipParts[0].trim() : '';
-            const userArea = zipParts.slice(1).join('').trim(); // "新竹市香山區"
+            const userArea = zipParts.slice(1).join('').trim(); 
 
             const carType = document.getElementById('carType').value;
             const addressVal = document.getElementById('address').value;
@@ -812,29 +791,24 @@
             document.getElementById('quoteCarType').innerText = carType;
             document.getElementById('quotePayment').innerText = document.getElementById('payment').value;
 
-            // --- 強化版基本車資比對邏輯 ---
+            // --- 基本車資比對邏輯修正 ---
             basicFare = 0;
             let fareDisplay = "客服人工確認報價";
             if (userZip && airport && priceTable.length > 0) {
-                const searchAirport = airport.substring(0, 2); // 例如 "桃園"
+                const searchAirport = airport.substring(0, 2); 
                 
                 let match = priceTable.find(item => {
                     const rowAirport = String(item.a || "").trim();
                     const rowZip = String(item.b || "").trim();
                     const rowArea = String(item.c || "").trim();
 
-                    // 首先檢查機場是否一致
                     if (!rowAirport.includes(searchAirport)) return false;
 
-                    // 1. 完全精準比對 (Zip + 地區)
-                    if (rowZip === userZip && rowArea === userArea) return true;
-
-                    // 2. 優先郵遞區號匹配，輔以地區模糊比對
+                    // 1. 郵遞區號精準比對
                     if (rowZip === userZip) {
-                        // 檢查報價表的地區 (如: 香山區) 是否包含在使用者抓到的完整區域 (如: 新竹市香山區) 內
-                        if (userArea.includes(rowArea) || rowArea.includes(userArea)) return true;
+                        // 2. 地區模糊比對 (處理「香山區」與「新竹市香山區」的差異)
+                        if (userArea.includes(rowArea) || rowArea.includes(userArea) || !rowArea) return true;
                     }
-
                     return false;
                 });
 
@@ -959,7 +933,6 @@
                 remarks: document.getElementById('remarks').value
             };
             try {
-                // 發送到儲存腳本
                 await fetch(GAS_URL, { 
                     method: 'POST', 
                     body: JSON.stringify({
