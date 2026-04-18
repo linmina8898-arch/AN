@@ -413,7 +413,6 @@
         // --- 設定常數 ---
         const LIFF_ID = "2009827083-SPSbrR9a";
         const LINE_OA_LINK = "https://line.me/R/ti/p/@220ewdah";
-        // 主要 API 網址 (GAS)
         const GAS_URL = "https://script.google.com/macros/s/AKfycbzwNr2pLiqKhR56Uzy7HMM3bWiH2PmnV-TPLAJ-6Hz3vXxFkOQDCJO40YW-BTjfBsuO/exec"; 
 
         let extraStopFee = 0;
@@ -422,13 +421,11 @@
         let priceTable = []; 
         let hasReadDetails = false; 
 
-        // --- 輔助函式：移除「台灣」字樣 ---
         function stripTaiwan(str) {
             if (!str) return "";
             return str.replace(/台灣/g, "").trim();
         }
 
-        // --- 核心優化：更精準的台灣地區解析 ---
         function parseZoneInfo(place) {
             let zip = '', city = '', dist = '';
             if (place && place.address_components) {
@@ -456,7 +453,6 @@
             return res.trim();
         }
 
-        // --- 抓取報價表資料 ---
         async function fetchPriceTable() {
             try {
                 const url = `${GAS_URL}?action=getPrices&t=${Date.now()}`;
@@ -466,19 +462,17 @@
                 if (data && Array.isArray(data)) {
                     priceTable = data;
                     console.log("報價資料庫已更新，共 " + priceTable.length + " 筆");
-                    updateLogic(); // 抓到資料後立即執行一次試算
+                    updateLogic();
                 }
             } catch (err) { 
                 console.error("報價讀取失敗:", err); 
             }
         }
 
-        // --- 核心邏輯：從報價表中尋找匹配項 (優化比對彈性) ---
         function findMatchedFare(userZip, userArea, airport) {
             if (!priceTable || priceTable.length === 0) return null;
             
-            const searchAirport = airport.substring(0, 2); // 例如 "桃園"
-            // 處理 Google 抓到的 5 碼郵遞區號轉 3 碼
+            const searchAirport = airport.substring(0, 2); 
             const cleanUserZip = userZip.substring(0, 3);
             const cleanUserArea = userArea.replace(/\s+/g, '');
 
@@ -488,17 +482,13 @@
                 const rowArea = String(item.c || "").trim().replace(/\s+/g, '');
 
                 if (!rowAirport.includes(searchAirport)) return false;
-
-                // 1. 優先匹配郵遞區號
                 if (rowZip === cleanUserZip) {
-                    // 2. 如果郵遞區號相同，檢查地區是否模糊匹配 (例如 "香山區" 在 "新竹市香山區" 內)
                     if (cleanUserArea.includes(rowArea) || rowArea.includes(cleanUserArea) || !rowArea) return true;
                 }
                 return false;
             });
         }
 
-        // --- 產生預約編號 ---
         function generateOrderId() {
             const d = new Date();
             const dateStr = d.getFullYear() + String(d.getMonth()+1).padStart(2,'0') + String(d.getDate()).padStart(2,'0');
@@ -509,7 +499,6 @@
             return `AX-${dateStr}${digits}${rChars}`;
         }
 
-        // --- 初始化頁面 ---
         async function initFormOptions() {
             let hrHtml = '', minHtml = '';
             for(let i=0; i<=23; i++) hrHtml += `<option value="${String(i).padStart(2,'0')}">${String(i).padStart(2,'0')}</option>`;
@@ -527,12 +516,10 @@
             setupSyncLogic();
             setupDetailsToggle();
             
-            // 執行資料抓取
             fetchPriceTable();
             updateLogic(); 
         }
 
-        // --- 詳細說明展開邏輯 ---
         function setupDetailsToggle() {
             const btn = document.getElementById('toggleDetails');
             const content = document.getElementById('detailsContent');
@@ -558,7 +545,6 @@
             });
         }
 
-        // --- 訂車人與乘車人連動邏輯 ---
         function setupSyncLogic() {
             const sameCheck = document.getElementById('sameAsOrderer');
             const oName = document.getElementById('ordererName');
@@ -582,7 +568,6 @@
             [oName, oTitle, oPhone].forEach(el => el.addEventListener('input', () => { if (sameCheck.checked) syncData(); }));
         }
 
-        // --- 人數與行李連動 ---
         function renderPaxOptions() {
             const adultEl = document.getElementById('paxAdult');
             const childEl = document.getElementById('paxChild');
@@ -601,7 +586,6 @@
             updateSelect(infantEl, curI, Math.min(2, 7 - curA - curC), 0);
         }
 
-        // --- Google Maps Autocomplete ---
         let addressAutocomplete, extraStopAutocomplete;
         function initMapAutocomplete() {
             const inputAddress = document.getElementById('address');
@@ -762,11 +746,13 @@
             const rideHourVal = document.getElementById('rideHour').value;
             const rideMinVal = document.getElementById('rideMinute').value;
 
-            let diffHours = -1;
+            // --- 強化 24 小時驗證邏輯 ---
             if (rideDateEl.value) {
+                const now = new Date();
                 const rideDateTime = new Date(`${rideDateEl.value}T${rideHourVal}:${rideMinVal}:00`);
-                diffHours = (rideDateTime - new Date()) / (1000 * 60 * 60);
-                if (diffHours < 24 && diffHours > 0) {
+                const diffHours = (rideDateTime - now) / (1000 * 60 * 60);
+
+                if (diffHours < 24 && diffHours > -1) { // 考慮到時差或細微誤差，設定為 > -1
                     Swal.fire({
                         title: '無法線上預約',
                         html: `<div style="text-align: left; line-height: 1.6;">線上預約需於出發前 24 小時完成。<br><br><span style="color: #f07cad; font-weight: bold;">【緊急叫車】</span>請直撥客服專線：<div style="text-align: center; margin-top: 15px;"><a href="tel:0955311306" style="color: #f07cad; font-size: 26px; font-weight: bold; text-decoration: none; display: inline-block; padding: 5px 15px; border: 2px solid #f07cad; border-radius: 25px;">0955-311-306</a></div></div>`,
@@ -775,7 +761,18 @@
                     });
                     rideDateEl.value = "";
                     rideDateEl.type = "text";
-                    diffHours = -1;
+                    return; // 終止後續計算
+                }
+
+                // 更新急單勾選
+                const optUrgent = document.getElementById('optUrgent');
+                const lblUrgent = document.getElementById('lblUrgent');
+                if (diffHours >= 24 && diffHours <= 48) {
+                    optUrgent.checked = true;
+                    lblUrgent.classList.remove('opacity-60');
+                } else {
+                    optUrgent.checked = false;
+                    lblUrgent.classList.add('opacity-60');
                 }
             }
             
@@ -790,22 +787,11 @@
                 lblNight.classList.add('opacity-60');
             }
 
-            const optUrgent = document.getElementById('optUrgent');
-            const lblUrgent = document.getElementById('lblUrgent');
-            if (diffHours >= 24 && diffHours <= 48) {
-                optUrgent.checked = true;
-                lblUrgent.classList.remove('opacity-60');
-            } else {
-                optUrgent.checked = false;
-                lblUrgent.classList.add('opacity-60');
-            }
-
             const rideType = document.getElementById('rideType').value;
             const airport = document.getElementById('airport').value;
             const fullZipInfo = document.getElementById('zipcode').value; 
             const extraZipInfo = document.getElementById('extraZipcode').value;
 
-            // 拆解主地址與加點地址的資訊
             const mainParts = fullZipInfo.split(' ');
             const mainZip = mainParts[0] ? mainParts[0].trim() : '';
             const mainArea = mainParts.slice(1).join('').trim();
@@ -816,7 +802,7 @@
 
             const carType = document.getElementById('carType').value;
             
-            // 行程路線顯示優化：使用完整的「區碼及區域」
+            // 行程路線顯示：使用完整的「區碼及區域」
             const areaDisplay = fullZipInfo || "地區";
             if (rideType === "送機") {
                 document.getElementById('quoteRoute').innerText = `${areaDisplay} → ${airport}`;
@@ -827,12 +813,11 @@
             document.getElementById('quoteCarType').innerText = carType;
             document.getElementById('quotePayment').innerText = document.getElementById('payment').value;
 
-            // --- 基本車資計算 (優化：如有加點，以價高者報價) ---
+            // --- 報價邏輯：如有加點，以價高者報價 ---
             basicFare = 0;
             let fareDisplay = "客服人工確認報價";
             
-            if (mainZip && airport && priceTable && priceTable.length > 0) {
-                // 1. 查找主地址價格
+            if (mainZip && airport && priceTable.length > 0) {
                 const matchMain = findMatchedFare(mainZip, mainArea, airport);
                 let mainPrice = 0;
                 if (matchMain) {
@@ -841,7 +826,6 @@
                     else mainPrice = parseInt(matchMain.f) || 0;
                 }
 
-                // 2. 如果有加點，查找加點價格並取最高者
                 let finalBasePrice = mainPrice;
                 if (needExtraStop && extraZip) {
                     const matchExtra = findMatchedFare(extraZip, extraArea, airport);
@@ -850,21 +834,12 @@
                         if (carType === '小車') extraPrice = parseInt(matchExtra.d) || 0;
                         else if (carType === '大車') extraPrice = parseInt(matchExtra.e) || 0;
                         else extraPrice = parseInt(matchExtra.f) || 0;
-                        
-                        // 取兩者中最高者作為基本報價
                         finalBasePrice = Math.max(mainPrice, extraPrice);
-                    } else if (mainPrice > 0) {
-                        // 如果加點地址沒對到但主地址有對到，暫時以主地址為主，或可設為人工報價
-                        finalBasePrice = mainPrice;
-                    } else {
-                        finalBasePrice = 0;
                     }
                 }
 
                 basicFare = finalBasePrice;
-                if (basicFare > 0) {
-                    fareDisplay = `$${basicFare}`;
-                }
+                if (basicFare > 0) fareDisplay = `$${basicFare}`;
             }
             document.getElementById('quoteBasePrice').innerText = fareDisplay;
 
@@ -921,8 +896,8 @@
             document.getElementById('carWarning').classList.toggle('hidden', isSmallOk);
 
             document.getElementById('quoteList').innerHTML = quoteHtml;
-            let finalTotal = basicFare + totalSurcharge;
-            document.getElementById('quoteTotal').innerText = `$${finalTotal}`;
+            let finalTotal = (basicFare > 0) ? (basicFare + totalSurcharge) : 0;
+            document.getElementById('quoteTotal').innerText = (basicFare > 0) ? `$${finalTotal}` : "$0";
         }
 
         document.getElementById('bookingForm').addEventListener('input', updateLogic);
@@ -1013,17 +988,13 @@
                 if (liff.isInClient()) { 
                     const msg1 = `【安星租車 預約明細】\n預約編號：${payload.orderId}\n乘車時間：${payload.rideDate} ${payload.rideTime}\n行程路線：${document.getElementById('quoteRoute').innerText}\n加價項目：${payload.surcharge || '無'}\n預估車資：${payload.totalEst}`;
                     const msg2 = `您的預約資料已成功送出！\n為確保您的行程細節與權益，客服專員正在為您進行訂單核對。\n\n📌 預約注意事項：\n• 訂單確認： 須收到本公司的『預約確認回覆』後，才算正式完成預約。\n• 付款資訊： 若您選擇轉帳或刷卡結帳，客服將於確認訂單時，一併提供專屬付款連結或帳號。\n感謝您的耐心等候，我們將盡快與您聯繫。`;
-                    
-                    await liff.sendMessages([
-                        { type: 'text', text: msg1 },
-                        { type: 'text', text: msg2 }
-                    ]); 
+                    await liff.sendMessages([{ type: 'text', text: msg1 }, { type: 'text', text: msg2 }]); 
                 }
                 Swal.fire({ title: '已成功送出', text: '請等候客服確認。', icon: 'success' }).then(() => { if(liff.isInClient()) liff.closeWindow(); else window.location.reload(); });
             } catch (err) { Swal.fire('錯誤', '傳送失敗，請電洽客服。', 'error'); btn.disabled = false; btn.innerText = '確認送出預約'; }
         });
 
-        window.onload = () => { initFormOptions(); initializeLiff(); };
+            window.onload = () => { initFormOptions(); initializeLiff(); };
     </script>
 </body>
 </html>
