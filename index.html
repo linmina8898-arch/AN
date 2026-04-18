@@ -413,7 +413,7 @@
         // --- 設定常數 ---
         const LIFF_ID = "2009827083-SPSbrR9a";
         const LINE_OA_LINK = "https://line.me/R/ti/p/@220ewdah";
-        const GAS_URL = "https://script.google.com/macros/s/AKfycbzwNr2pLiqKhR56Uzy7HMM3bWiH2PmnV-TPLAJ-6Hz3vXxFkOQDCJO40YW-BTjfBsuO/exec"; 
+        const GAS_URL = "https://script.google.com/macros/s/AKfycbzOrykDeXF3R-zYzn0bVik4HQKAAWNhebAzNc4psRf45j7vRx8NF0N9gsy1fFPMyluG/exec"; 
 
         let extraStopFee = 0;
         let extraStopDist = 0;
@@ -911,10 +911,6 @@
             e.preventDefault();
             const sameAs = document.getElementById('sameAsOrderer').checked;
             
-            // 基礎公告/聲明驗證
-            if (!hasReadDetails) { Swal.fire('提醒', '請點擊「詳細說明」閱讀乘車規範後方可送出', 'warning'); return; }
-            if (!document.getElementById('agreeDisclaimer').checked) { Swal.fire('提醒', '【乘車注意事項】\n(同意後方可送出)', 'warning'); return; }
-
             // 收集所有錯誤
             let errors = [];
 
@@ -956,8 +952,12 @@
                 if (!document.getElementById('sportLuggageSize').value.trim()) errors.push("胖胖箱尺寸/大小");
             }
 
-            // 7. 備註欄位驗證
-            if (!document.getElementById('remarks').value.trim()) errors.push("其他備註 (若無請填無)");
+            // 7. 最後檢查公告與同意書 (移至最後)
+            if (!hasReadDetails) {
+                errors.push("請點擊「詳細說明」閱讀乘車規範");
+            } else if (!document.getElementById('agreeDisclaimer').checked) {
+                errors.push("請勾選同意【乘車注意事項】聲明");
+            }
 
             // 若有錯誤一次噴出
             if (errors.length > 0) {
@@ -993,12 +993,13 @@
                 sysLineId: document.getElementById('sysLineId').value,
                 ordererName: document.getElementById('ordererName').value,
                 ordererPhone: document.getElementById('ordererPhone').value,
+                userLineId: document.getElementById('userLineId').value,
                 paxName: document.getElementById('paxName').value,
+                paxTitle: document.getElementById('paxTitle').value,
                 paxPhone: document.getElementById('paxPhone').value,
                 zipcode: document.getElementById('zipcode').value,
                 address: stripTaiwan(document.getElementById('address').value),
                 rideDate: document.getElementById('rideDate').value,
-                // 強制 HH:MM 文字格式
                 rideTime: `${document.getElementById('rideHour').value}:${document.getElementById('rideMinute').value}`,
                 airport: document.getElementById('airport').value,
                 flightNo: document.getElementById('flightNo').value.toUpperCase(),
@@ -1029,9 +1030,12 @@
                             title: document.getElementById('ordererTitle').value,
                             phone: payload.ordererPhone,
                             email: document.getElementById('email').value,
-                            paxInfo: payload.paxName + (document.getElementById('paxTitle').value) + " / " + payload.paxPhone,
+                            lineUid: payload.sysLineId, // 自動抓取的 LINE UID
+                            lineId: payload.userLineId,   // 使用者填寫的 LINE ID
+                            paxFullName: payload.paxName + payload.paxTitle, // 乘車人全名一格
+                            paxPhone: payload.paxPhone,                       // 乘車人電話一格
                             date: payload.rideDate,
-                            time: payload.rideTime, // 此處即為 HH:MM 格式
+                            time: payload.rideTime,
                             serviceType: payload.rideType,
                             airport: payload.airport,
                             flightNumber: payload.flightNo,
@@ -1042,7 +1046,7 @@
                             luggage: `登機${payload.lugCarry} 托運${payload.lugChecked} / 胖胖箱:${payload.sportLuggage}`,
                             totalFee: payload.totalEst,
                             payment: payload.payment,
-                            remarks: payload.remarks + (payload.surcharge ? "\n加價項目: " + payload.surcharge : "")
+                            remarks: (payload.remarks || '無') + (payload.surcharge ? "\n加價項目: " + payload.surcharge : "")
                         }
                     }), 
                     headers: { 'Content-Type': 'text/plain;charset=utf-8' } 
@@ -1051,7 +1055,7 @@
                 if (liff.isInClient()) { 
                     const msg1 = `【安星租車 預約單明細】
 預約編號：${payload.orderId}
-乘車人姓名：${payload.paxName}${document.getElementById('paxTitle').value}
+乘車人姓名：${payload.paxName}${payload.paxTitle}
 乘車人電話：${payload.paxPhone}
 接送地址：${payload.address}
 ${payload.extraStop ? '加點地址：' + payload.extraStop : ''}
