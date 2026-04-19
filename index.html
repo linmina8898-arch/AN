@@ -1083,7 +1083,7 @@ ${payload.signboard !== '無' ? '舉牌服務：' + payload.signboard : ''}
 備註：${payload.remarks || '無'}
 加價項目：${payload.surcharge}`;
 
-                    const msg2 = `您的預約資料已成功送出！\n為確保您的行程細節與權益，客服專員正在為您進行訂單核對。\n\n📍 預約注意事項：\n• 訂單確認： 須收到本公司的『預約確認回覆』後，才算正式完成預約。\n\n• 付款資訊： 若您選擇轉帳或刷卡結帳，客服將於確認訂單時，一併提供專屬付款連結或帳號。\n感謝您的耐心等候，我們將盡快與您聯繫。`;
+                    const msg2 = `您的預約資料已成功送出！\n為確保您的行程細節與權益，客服專員正在為您進行訂單核對。\n\n📍 預約注意事項：\n• 訂單確認：\n須收到本公司的『預約確認回覆』後，才算正式完成預約。\n\n• 付款資訊：\n若您選擇轉帳或刷卡結帳，客服將於確認訂單時，一併提供專屬付款連結或帳號。\n\n感謝您的耐心等候，我們將盡快與您聯繫。`;
                     await liff.sendMessages([{ type: 'text', text: msg1.replace(/\n\s*\n/g, '\n') }, { type: 'text', text: msg2 }]); 
                 }
                 Swal.fire({ title: '已成功送出', text: '請等候客服確認。', icon: 'success' }).then(() => { if(liff.isInClient()) liff.closeWindow(); else window.location.reload(); });
