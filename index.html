@@ -935,6 +935,7 @@
             if (!document.getElementById('ordererName').value.trim()) errors.push("訂車人姓名");
             if (!document.getElementById('ordererPhone').value.trim()) errors.push("訂車人聯絡電話");
             if (!document.getElementById('userLineId').value.trim()) errors.push("LINE ID");
+            
             if (!sameAs) {
                 if (!document.getElementById('paxName').value.trim()) errors.push("乘車人姓名");
                 if (!document.getElementById('paxPhone').value.trim()) errors.push("乘車人聯絡電話");
@@ -953,6 +954,8 @@
             const sportRadio = Array.from(document.getElementsByName('sportLuggageRadio')).find(r => r.checked)?.value;
             if (sportRadio === "是" && !document.getElementById('sportLuggageSize').value.trim()) errors.push("胖胖箱尺寸/大小");
             
+            if (document.getElementById('optSign').checked && !document.getElementById('signContent').value.trim()) errors.push("舉牌服務姓名或內容");
+
             // 最後檢查公告與同意書 (順序放在最後)
             if (!hasReadDetails) errors.push("請點擊「詳細說明」閱讀乘車規範");
             else if (!document.getElementById('agreeDisclaimer').checked) errors.push("請勾選同意【乘車注意事項】聲明");
@@ -962,7 +965,11 @@
                     title: '資料未填寫完整',
                     html: `<div style="text-align: left; line-height: 1.8;">請完成以下項目：<br><br><span style="color: #f07cad; font-weight: bold;">${errors.map((err, idx) => `${idx+1}. ${err}`).join('<br>')}</span></div>`,
                     icon: 'warning',
-                    confirmButtonColor: '#553f62'
+                    confirmButtonColor: '#553f62',
+                    returnFocus: false
+                }).then(() => {
+                    // 關閉視窗後自動滑動回最上方，避免視窗停在「確認送出」導致直接看到乘車規範
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
                 });
                 return;
             }
